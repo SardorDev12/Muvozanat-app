@@ -52,26 +52,6 @@ export const MAX_SCORE = 10;
 /** Scores at or below this are surfaced as "needs attention" after an assessment. */
 export const ATTENTION_THRESHOLD = 5;
 
-/**
- * Definitions are authored in five bands rather than ten separate strings: a
- * band covers two adjacent marks, which keeps the copy meaningful in three
- * languages without turning every step into a near-duplicate sentence.
- */
-export const SCORE_BANDS = [
-  { id: 'b1', min: 1, max: 2 },
-  { id: 'b3', min: 3, max: 4 },
-  { id: 'b5', min: 5, max: 6 },
-  { id: 'b7', min: 7, max: 8 },
-  { id: 'b9', min: 9, max: 10 },
-] as const;
-
-export type ScoreBandId = (typeof SCORE_BANDS)[number]['id'];
-
-export function bandForScore(score: number): ScoreBandId {
-  const band = SCORE_BANDS.find((b) => score >= b.min && score <= b.max);
-  return band ? band.id : 'b5';
-}
-
 export type WheelScores = Record<LifeAreaKey, number>;
 
 export function defaultScores(): WheelScores {

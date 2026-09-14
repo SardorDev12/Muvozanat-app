@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { useThemePreference } from './preference';
 import { ColorScheme, Palette, palettes, radius, spacing, typography } from './tokens';
 
 type ThemeValue = {
@@ -15,7 +16,10 @@ const ThemeContext = createContext<ThemeValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
-  const scheme: ColorScheme = systemScheme === 'dark' ? 'dark' : 'light';
+  const preference = useThemePreference();
+
+  const scheme: ColorScheme =
+    preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
 
   const value = useMemo<ThemeValue>(
     () => ({ scheme, colors: palettes[scheme], spacing, radius, typography }),

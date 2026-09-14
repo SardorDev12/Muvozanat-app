@@ -1,7 +1,6 @@
 /* eslint-disable import/no-named-as-default-member -- the i18next default export is the
    configured singleton; its named exports act on a different instance. */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Localization from 'expo-localization';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -18,7 +17,6 @@ export const SUPPORTED_LANGUAGES = [
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 const LANGUAGE_STORAGE_KEY = 'muvozanat.language';
-const FALLBACK: LanguageCode = 'uz';
 
 export const resources = {
   en: { translation: en },
@@ -30,18 +28,13 @@ function isSupported(code: string | null | undefined): code is LanguageCode {
   return code === 'uz' || code === 'ru' || code === 'en';
 }
 
-function detectDeviceLanguage(): LanguageCode {
-  try {
-    for (const locale of Localization.getLocales()) {
-      if (isSupported(locale.languageCode)) return locale.languageCode;
-    }
-  } catch {
-    // Static web prerendering runs this in Node, where there is no device
-    // locale to read. The fallback is correct there and the real language is
-    // applied as soon as the page hydrates.
-  }
-  return FALLBACK;
-}
+/**
+ * Uzbek is the default, not the device language. This is an Uzbek-audience app,
+ * and a phone set to Russian or English should still open in Uzbek unless its
+ * owner says otherwise. A stored preference always wins; see
+ * hydrateStoredLanguage below.
+ */
+const DEFAULT_LANGUAGE: LanguageCode = 'uz';
 
 /**
  * Translations are bundled, so i18next initialises synchronously at import.
@@ -53,7 +46,7 @@ function detectDeviceLanguage(): LanguageCode {
  */
 i18n.use(initReactI18next).init({
   resources,
-  lng: detectDeviceLanguage(),
+  lng: DEFAULT_LANGUAGE,
   fallbackLng: 'en',
   defaultNS: 'translation',
   interpolation: { escapeValue: false },
@@ -63,9 +56,8 @@ i18n.use(initReactI18next).init({
 });
 
 /**
- * Applies a previously chosen language. Runs after the first paint: reading it
- * is async, and the device language is a good enough guess to render with in
- * the meantime.
+ * Applies a previously chosen language. Runs after the first paint, because
+ * reading it is async and the default is the right thing to render meanwhile.
  */
 export async function hydrateStoredLanguage(): Promise<void> {
   try {

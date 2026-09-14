@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { hydrateStoredLanguage } from '@/i18n';
+import { hydrateStoredTheme } from '@/theme/preference';
 import { QueryProvider } from '@/state/QueryProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
@@ -41,7 +42,7 @@ export default function RootLayout() {
   // there is nothing to wait for before the first paint. A stored preference,
   // which needs an async read, is applied once it arrives.
   useEffect(() => {
-    hydrateStoredLanguage().finally(() => {
+    Promise.all([hydrateStoredLanguage(), hydrateStoredTheme()]).finally(() => {
       SplashScreen.hideAsync().catch(() => {});
     });
   }, []);

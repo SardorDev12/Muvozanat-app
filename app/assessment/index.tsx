@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { LifePieChart } from '@/components/LifePieChart';
 import { LifeWheel } from '@/components/LifeWheel';
-import { ScoreInput } from '@/components/ScoreInput';
+import { ScoreSelect } from '@/components/ScoreSelect';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CONTENT_MAX_WIDTH, Screen } from '@/components/ui/Screen';
@@ -90,13 +90,13 @@ export default function AssessmentScreen() {
           </View>
         </View>
 
-        <Card style={{ gap: spacing.xl }}>
+        <Card style={{ gap: spacing.md }}>
           <Text variant="caption" tone="faint">
             {t('assessment.scaleHint')}
           </Text>
 
           {LIFE_AREAS.map((area) => (
-            <ScoreInput
+            <ScoreSelect
               key={area.key}
               area={area.key}
               value={scores[area.key]}

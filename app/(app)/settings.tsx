@@ -11,6 +11,11 @@ import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile, useUpdateProfile } from '@/features/profile/queries';
 import { SUPPORTED_LANGUAGES, intlLocale, setLanguage, type LanguageCode } from '@/i18n';
+import {
+  THEME_PREFERENCES,
+  setThemePreference,
+  useThemePreference,
+} from '@/theme/preference';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatTimestamp } from '@/utils/date';
 import { useNow } from '@/utils/useNow';
@@ -42,6 +47,7 @@ export default function SettingsScreen() {
   const profile = useProfile();
   const updateProfile = useUpdateProfile();
   const now = useNow();
+  const themePreference = useThemePreference();
   const [signingOut, setSigningOut] = useState(false);
 
   const locale = intlLocale(i18n.language);
@@ -79,6 +85,20 @@ export default function SettingsScreen() {
                 label={language.label}
                 selected={i18n.language === language.code}
                 onPress={() => changeLanguage(language.code)}
+              />
+            ))}
+          </View>
+        </Card>
+
+        <Card style={{ gap: spacing.md }}>
+          <Text variant="heading">{t('settings.appearance')}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {THEME_PREFERENCES.map((preference) => (
+              <Chip
+                key={preference}
+                label={t(`settings.theme.${preference}`)}
+                selected={themePreference === preference}
+                onPress={() => setThemePreference(preference)}
               />
             ))}
           </View>

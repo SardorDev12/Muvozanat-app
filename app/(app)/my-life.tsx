@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { LifePieChart } from '@/components/LifePieChart';
 import { LifeWheel } from '@/components/LifeWheel';
 import { WheelHistoryChart } from '@/components/WheelHistoryChart';
+import { WheelRoad } from '@/components/WheelRoad';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CONTENT_MAX_WIDTH, Screen } from '@/components/ui/Screen';
@@ -61,6 +62,14 @@ export default function MyLifeScreen() {
           </Card>
         ) : (
           <>
+            <Card style={{ gap: spacing.sm }}>
+              <Text variant="heading">{t('assessment.rideTitle')}</Text>
+              <WheelRoad scores={scores} size={chartSize * 0.52} width={contentWidth} />
+              <Text variant="caption" tone="muted">
+                {t('assessment.rideCaption')}
+              </Text>
+            </Card>
+
             <View style={{ alignItems: 'center', gap: spacing.lg }}>
               <LifeWheel scores={scores} size={chartSize} runKey={history.dataUpdatedAt} />
               <LifePieChart
