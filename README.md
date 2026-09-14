@@ -113,18 +113,25 @@ daylight-saving transition can't produce a 23-hour day and round the wrong way.
 
 ## Setup
 
-Everything below is done in a browser — Supabase, Google Cloud, Expo,
-Cloudflare and GitHub dashboards. No CLI is required: the GitHub Actions in
-this repo do the builds and deploys for you.
+Everything here is done in a browser — Supabase, Cloudflare, Google Cloud,
+Expo and GitHub dashboards. No command line, no local install: the workflows in
+this repo do every build and deploy.
 
-### 1. Supabase — database and auth
+**Already wired up in the repo, nothing to do:** the EAS project id, owner and
+update URL in `app.json`; the SQL migrations; all five workflows; the Cloudflare
+Pages SPA fallback; and the worker's Supabase URL, which is injected at deploy
+time from your GitHub secret rather than committed.
+
+Work through the steps in order — each one produces a value the next needs.
+
+### 1. Supabase — database and keys
 
 1. **Create the project.** [supabase.com/dashboard](https://supabase.com/dashboard)
    → **New project**. Pick a region near your users and save the database
    password somewhere safe.
-2. **Create the schema.** Open **SQL Editor** → **New query**. Paste the
-   contents of each file in `supabase/migrations/` and run them **in filename
-   order** — the later files depend on the earlier ones:
+
+2. **Create the schema.** **SQL Editor → New query**, then paste and run the
+   files from `supabase/migrations/` **in filename order**:
 
    | #   | File                                   | What it creates                          |
    | --- | -------------------------------------- | ---------------------------------------- |
@@ -133,25 +140,55 @@ this repo do the builds and deploys for you.
    | 3   | `20260914000300_rls.sql`               | Row Level Security policies and grants   |
    | 4   | `20260914000400_completion_rollup.sql` | `completed_at` and the completion rollup |
 
-   Each one should finish with "Success. No rows returned."
+   The editor runs a script as one transaction, so you can also paste all four
+   into a single query and run them together. Either way it should finish with
+   "Success. No rows returned."
 
-3. **Copy the keys.** **Project Settings → API**. You need the **Project URL**
-   and the **anon / public** key. They go into the GitHub secrets in step 6.
+   Row Level Security is switched on by file 3. There is nothing to enable when
+   creating the project.
 
-   A local `.env` (copy `.env.example`) is only needed if you run the app on
-   your own machine. If you build and deploy entirely through GitHub Actions,
-   skip it — the secrets are the only place these values have to exist.
+   Check it worked:
+
+   ```sql
+   select count(*) as tables from information_schema.tables
+    where table_schema = 'public' and table_type = 'BASE TABLE';   -- 8
+   select count(*) as policies from pg_policies where schemaname = 'public';  -- 28
+   ```
+
+3. **Copy the keys.** **Project Settings → API**. Take the **Project URL** and
+   the **anon / public** key — they become GitHub secrets in step 5.
 
    The **service_role** key is on the same page. It bypasses Row Level
-   Security — it goes into the Cloudflare Worker only, never into `.env` and
-   never into a GitHub secret used by an app build.
+   Security. It goes into the Cloudflare Worker in step 7 and **nowhere else** —
+   never a GitHub secret used by an app build, never anything prefixed
+   `EXPO_PUBLIC_`, because those are compiled into the JS bundle and readable by
+   anyone who opens the site.
 
-### 2. Google Cloud — the sign-in client
+   A local `.env` is only needed if you run the app on your own machine. If you
+   build through GitHub Actions, skip it.
+
+### 2. Cloudflare — account, token, Pages project
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages**.
+   Your **Account ID** is in the right-hand sidebar.
+
+2. **My Profile → API Tokens → Create Token → Custom token**, with:
+   - _Account → Workers Scripts → Edit_
+   - _Account → Cloudflare Pages → Edit_
+
+3. **Create the Pages project now**, before any deploy targets it:
+   **Workers & Pages → Create → Pages → Upload assets**, named exactly
+   `muvozanat`. Upload nothing — CI replaces the contents. If the project does
+   not exist, the deploy fails even with a valid token.
+
+Your web address is now **`https://muvozanat.pages.dev`**. Step 4 needs it.
+
+### 3. Google Cloud — the sign-in client
 
 1. [console.cloud.google.com](https://console.cloud.google.com) → create a
    project.
-2. **APIs & Services → OAuth consent screen** → **External** → fill in app
-   name, support email and developer contact.
+2. **APIs & Services → OAuth consent screen → External** → app name, support
+   email, developer contact.
 3. **APIs & Services → Credentials → Create credentials → OAuth client ID** →
    application type **Web application**.
 4. Under **Authorised redirect URIs** add exactly:
@@ -162,115 +199,93 @@ this repo do the builds and deploys for you.
 
 5. Copy the **client ID** and **client secret**.
 
-> You only need the _Web_ client. Sign-in runs through Supabase's OAuth
-> endpoint in a system browser on native, so there is no separate iOS or
-> Android Google client to configure.
+> Only the _Web_ client is needed. Sign-in runs through Supabase's OAuth
+> endpoint in a system browser on phones too, so there is no separate iOS or
+> Android Google client to create.
 
-### 3. Supabase — turn on the providers
+### 4. Supabase — providers and redirect URLs
 
-1. **Authentication → Sign In / Providers → Google**: enable it, paste the
-   client ID and secret from step 2, save.
-2. **Email** is enabled by default. While testing, turning **Confirm email**
-   off lets you sign up without a round trip through your inbox.
+1. **Authentication → Sign In / Providers → Google**: enable, paste the client
+   id and secret from step 3, save.
+2. **Email** is on by default. While testing, turning **Confirm email** off
+   lets you sign up without checking your inbox.
 3. **Authentication → URL Configuration**:
-   - **Site URL**: `http://localhost:8081` during development, your real
-     domain once the web app is live.
-   - **Redirect URLs** — add all of these:
+   - **Site URL**: `https://muvozanat.pages.dev`
+   - **Redirect URLs** — add both:
 
      ```
+     https://muvozanat.pages.dev/auth/callback
      muvozanat://auth/callback
-     http://localhost:8081/auth/callback
-     https://<your-web-domain>/auth/callback
      ```
 
-   The `muvozanat://` entry is what lets the iOS and Android apps receive the
-   callback. Without it, Google sign-in works on web and hangs on device.
+   The `muvozanat://` line is what lets the phone apps receive the callback.
+   Without it, Google sign-in works on the web and hangs on a device with no
+   error.
 
-### 4. Expo — project id and update URL
+### 5. Expo and GitHub — the token and the secrets
 
-1. [expo.dev](https://expo.dev) → **Projects → Create a project**. The **slug**
-   must be `muvozanat`, matching `app.json`.
-2. Copy the **Project ID** (a UUID) from the project's overview page.
-3. Edit `app.json` by hand and add both of these — `eas update` will not work
-   without them:
+1. [expo.dev](https://expo.dev) → **Account settings → Access tokens → Create
+   token.** Copy it.
 
-   ```jsonc
-   {
-     "expo": {
-       "owner": "<your expo account or organisation name>",
-       "extra": {
-         "router": {},
-         "eas": { "projectId": "<the UUID you copied>" },
-       },
-       "updates": { "url": "https://u.expo.dev/<the same UUID>" },
-     },
-   }
-   ```
+   The project itself is already created and referenced in `app.json`
+   (`muvozanat`, owner `sardordev12`), so there is nothing else to do here.
 
-   Commit that change — CI reads it.
+2. **GitHub → Settings → Secrets and variables → Actions → New repository
+   secret**, five times. Paste the **value only** — name and value are separate
+   boxes, so no `KEY=value`, no quotes:
 
-4. **Account settings → Access tokens → Create token.** Copy it; it becomes the
-   `EXPO_TOKEN` GitHub secret below.
+   | Secret                          | Value                            |
+   | ------------------------------- | -------------------------------- |
+   | `EXPO_PUBLIC_SUPABASE_URL`      | Supabase Project URL (step 1.3)  |
+   | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase **anon** key (step 1.3) |
+   | `EXPO_TOKEN`                    | Expo access token (step 5.1)     |
+   | `CLOUDFLARE_API_TOKEN`          | Cloudflare token (step 2.2)      |
+   | `CLOUDFLARE_ACCOUNT_ID`         | Cloudflare account id (step 2.1) |
 
-### 5. Cloudflare — account, token, and the two projects
+   Every deploy workflow checks these first and fails with the missing name if
+   one is absent, so a typo says so plainly rather than surfacing as an
+   authentication error further down.
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages**.
-   Your **Account ID** is in the right-hand sidebar.
-2. **My Profile → API Tokens → Create Token → Custom token.** Give it:
-   - _Account → Workers Scripts → Edit_
-   - _Account → Cloudflare Pages → Edit_
-3. **Create the Pages project up front** so the deploy has somewhere to go:
-   **Workers & Pages → Create → Pages → Upload assets**, name it exactly
-   `muvozanat`. You can upload nothing; CI replaces the contents.
-   The Pages project must exist before the first deploy targets it, otherwise
-   the deploy step fails even with a valid token.
+### 6. First deploy
 
-### 6. GitHub — secrets
+Push anything to `main`, or **Actions → Deploy web → Run workflow**. Three
+workflows run: **CI**, **Deploy web**, and **EAS OTA update**. All three should
+go green.
 
-**Settings → Secrets and variables → Actions → New repository secret**:
+Open `https://muvozanat.pages.dev`. You should get the sign-in screen. Create an
+account, and the app should send you straight into the life wheel assessment.
 
-| Secret                          | Value                      | Used by                        |
-| ------------------------------- | -------------------------- | ------------------------------ |
-| `EXPO_TOKEN`                    | Expo access token (step 4) | EAS build and update workflows |
-| `EXPO_PUBLIC_SUPABASE_URL`      | Supabase project URL       | every app build                |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase **anon** key      | every app build                |
-| `CLOUDFLARE_API_TOKEN`          | token from step 5          | web and worker deploys         |
-| `CLOUDFLARE_ACCOUNT_ID`         | account id from step 5     | web and worker deploys         |
+If sign-in with Google returns to a blank page, the redirect URL in step 4.3
+does not match your actual domain.
 
-`main` is the only branch and is already the default, so there is nothing else
-to configure here.
+### 7. The reminder worker
 
-### 7. The reminder worker's secret
+The worker has to exist before it can be given a secret, and CI creates it on
+its first deploy.
 
-The worker has to exist before you can give it a secret, and CI creates it on
-the first deploy:
-
-1. Push to `main` (or **Actions → Deploy reminder worker → Run workflow**).
-2. **Workers & Pages → muvozanat-reminders → Settings → Variables and
-   Secrets → Add** → type **Secret**, name `SUPABASE_SERVICE_ROLE_KEY`, value
-   from Supabase step 1.3.
-3. Optionally add `ADMIN_TRIGGER_SECRET` the same way; that enables
-   `POST /run` so you can trigger a sweep by hand instead of waiting for
-   06:00 UTC.
-4. Re-run the deploy workflow so the worker picks the secret up.
+1. **Actions → Deploy reminder worker → Run workflow.**
+2. **Workers & Pages → muvozanat-reminders → Settings → Variables and Secrets →
+   Add**, type **Secret**, name `SUPABASE_SERVICE_ROLE_KEY`, value from step
+   1.3.
+3. Optionally add `ADMIN_TRIGGER_SECRET` the same way. It enables `POST /run`,
+   so you can trigger a sweep by hand instead of waiting for 06:00 UTC.
+4. Re-run the workflow so the worker picks the secret up.
 
 Secrets set in the dashboard survive later deploys, so this is a one-off.
+`SUPABASE_URL` is injected automatically from your GitHub secret — there is no
+placeholder to edit.
 
-### 8. Run and build it
+### 8. Getting it on a phone
 
-- **Web**: pushing to `main` exports the site and deploys it to
-  Cloudflare Pages. `public/_redirects` ships the SPA fallback rule, so deep
-  links like `/goals/<id>` and page refreshes resolve instead of 404ing.
-  Running locally (`npm install && npm run web`) is optional.
-- **On a phone, no Mac or Android Studio needed**: **Actions → EAS native
-  build → Run workflow**, pick a platform. When it finishes, the build appears
-  under your project on [expo.dev](https://expo.dev) with a QR code and an
-  install link. Android gives you an APK you can install directly; iOS needs
-  the device registered to your Apple Developer account, which Expo walks you
-  through the first time.
-- **After that, JS-only changes need no rebuild**: every push to `main`
-  publishes an over-the-air update, and the installed app picks it up on its
-  next launch.
+**Actions → EAS native build → Run workflow**, pick a platform and the
+`preview` profile. It takes 10–20 minutes; the result appears on
+[expo.dev](https://expo.dev) with a QR code and an install link. Android gives
+you an APK you can install directly. iOS needs the device registered to your
+Apple Developer account, which Expo walks you through the first time.
+
+After that, **JS-only changes need no rebuild**: every push to `main` publishes
+an over-the-air update and the installed app picks it up on its next launch.
+Build again only when you add a native library or change `app.json`.
 
 <details>
 <summary>Prefer the command line?</summary>
@@ -278,9 +293,11 @@ Secrets set in the dashboard survive later deploys, so this is a one-off.
 ```bash
 npm install -g eas-cli supabase
 supabase link --project-ref <ref> && supabase db push
-eas login && eas init && eas update:configure
 cd workers/reminders && npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
+
+`eas init` and `eas update:configure` are not needed — `app.json` already has
+the project id, owner and update URL.
 
 </details>
 
