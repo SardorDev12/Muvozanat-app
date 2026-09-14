@@ -56,6 +56,17 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+      # Prints which Expo account the token belongs to. `owner` in app.json has
+      # to match it, or EAS looks for the project under the wrong account and
+      # reports it as non-existent.
+      - name: Who am I
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "Token belongs to: $(eas whoami)"
+          echo "app.json owner  : $(node -p "require('./app.json').expo.owner")"
+          echo "app.json id     : $(node -p "require('./app.json').expo.extra.eas.projectId")"
+
       - name: Publish
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
