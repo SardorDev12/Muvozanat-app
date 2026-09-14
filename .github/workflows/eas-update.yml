@@ -63,16 +63,19 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Token belongs to: $(eas whoami)"
-          echo "app.json owner  : $(node -p "require('./app.json').expo.owner")"
-          echo "app.json id     : $(node -p "require('./app.json').expo.extra.eas.projectId")"
+          echo "token account  : $(eas whoami)"
+          node -e "const e=require('./app.json').expo; console.log('app.json owner :', e.owner); console.log('app.json id    :', e.extra.eas.projectId)"
 
       - name: Publish
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          # Through the environment, never interpolated into the script: a
+          # commit message is arbitrary text, and ${{ }} would paste its
+          # backticks and quotes straight into the shell for re-parsing.
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Manual update' }}
         run: |
-          eas update \
-            --branch production \
-            --message "${{ github.event.head_commit.message || 'Manual update' }}" \
-            --non-interactive
+          # EAS wants a one-line label, so take the commit subject and cap it.
+          summary=$(printf '%s' "$COMMIT_MESSAGE" | head -n 1 | cut -c1-180)
+          [ -n "$summary" ] || summary="Manual update"
+          eas update --branch production --message "$summary" --non-interactive
