@@ -8,7 +8,6 @@ alter table public.goals               enable row level security;
 alter table public.goal_components     enable row level security;
 alter table public.tasks               enable row level security;
 alter table public.task_completions    enable row level security;
-alter table public.notifications       enable row level security;
 
 -- ------------------------------------------------------------ profiles ----
 -- No INSERT policy: rows are created by the on_auth_user_created trigger.
@@ -107,17 +106,6 @@ create policy "task_completions: update own"
 create policy "task_completions: delete own"
   on public.task_completions for delete using (auth.uid() = user_id);
 
--- ------------------------------------------------------- notifications ----
--- Inserted only by the Worker (service role, which bypasses RLS). Users may
--- read their own and dismiss them.
-
-create policy "notifications: read own"
-  on public.notifications for select using (auth.uid() = user_id);
-
-create policy "notifications: update own"
-  on public.notifications for update
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
 -- ----------------------------------------------------------- grants ----
 
 grant usage on schema public to anon, authenticated;
@@ -128,8 +116,7 @@ grant select, insert, update, delete on
   public.goals,
   public.goal_components,
   public.tasks,
-  public.task_completions,
-  public.notifications
+  public.task_completions
 to authenticated;
 grant select on public.assessment_history, public.goal_progress to authenticated;
 grant execute on function public.save_assessment(jsonb, text) to authenticated;

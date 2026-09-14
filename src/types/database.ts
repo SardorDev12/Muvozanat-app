@@ -92,16 +92,6 @@ export type TaskCompletionRow = {
   completed_at: string;
 };
 
-export type NotificationRow = {
-  id: string;
-  user_id: string;
-  kind: 'reassessment_due';
-  payload: Record<string, unknown>;
-  created_at: string;
-  read_at: string | null;
-  dismissed_at: string | null;
-};
-
 export type GoalProgressRow = {
   goal_id: string;
   user_id: string;
@@ -157,7 +147,6 @@ export type Database = {
           completed_at?: string;
         }
       >;
-      notifications: Table<NotificationRow>;
     };
     Views: {
       assessment_history: {

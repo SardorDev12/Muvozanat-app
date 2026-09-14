@@ -109,15 +109,6 @@ begin
                                        else p.reassess_snoozed_until end
    where p.id = target_user;
 
-  -- A fresh assessment resolves any outstanding nudge.
-  if tg_op = 'INSERT' then
-    update public.notifications
-       set dismissed_at = now()
-     where user_id = target_user
-       and kind = 'reassessment_due'
-       and dismissed_at is null;
-  end if;
-
   return null;
 end;
 $$;

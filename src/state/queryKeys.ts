@@ -13,5 +13,4 @@ export const queryKeys = {
   tasksForGoal: (goalId: string) => ['tasks', 'goal', goalId] as const,
   completions: (userId: string, from: DateKey, to: DateKey) =>
     ['completions', userId, from, to] as const,
-  notifications: (userId: string) => ['notifications', userId] as const,
 };

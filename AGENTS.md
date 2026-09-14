@@ -22,10 +22,12 @@ surface moves between SDKs.
   measurement — React error #418 on every page load, in both colour schemes.
   `app/+html.tsx` is ignored under `"single"`; do not add one back expecting it
   to apply.
-- **Two Workers, two configs.** The root `wrangler.toml` is the website, an
-  assets-only Worker with no `main` script. `workers/reminders/wrangler.toml` is
-  the nightly reminder cron. Deploying one must never pick up the other's
-  config.
+- **One Worker, and it only serves files.** The root `wrangler.toml` is the
+  website: an assets-only Worker with no `main` script. There is no server-side
+  code anywhere in this project, and no use for the Supabase service_role key.
+  A nightly reminder cron used to exist and was removed: it only wrote rows
+  duplicating a check the app already makes, since a reassessment prompt is
+  only ever seen with the app open.
 - **i18next initialises synchronously at import.** Gating the tree on an async
   init cost a blank first frame on every launch. `hydrateStoredLanguage()`
   applies a saved preference after the first paint.
@@ -47,7 +49,8 @@ surface moves between SDKs.
 - **Life area keys are a Postgres enum.** Changing `LIFE_AREA_KEYS` in
   `src/features/assessment/areas.ts` requires a migration.
 - **RLS is the whole access model.** The app talks to Postgres directly with the
-  anon key. Any new table needs policies in the RLS migration.
+  anon key, and nothing else ever talks to the database. Any new table needs
+  policies in the RLS migration.
 - **English is the source of truth for copy.** `src/i18n/locales/en.ts` defines
   the `Translations` type; `ru.ts` and `uz.ts` must satisfy it, so a missing key
   is a typecheck failure.

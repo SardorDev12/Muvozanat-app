@@ -4,11 +4,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useReassessment } from '@/features/assessment/useReassessment';
-import {
-  useDismissNotification,
-  useOpenNotifications,
-  useUpdateProfile,
-} from '@/features/profile/queries';
+import { useUpdateProfile } from '@/features/profile/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 import { Button } from './ui/Button';
@@ -27,15 +23,12 @@ export function ReassessBanner() {
   const { spacing } = useTheme();
   const router = useRouter();
   const state = useReassessment();
-  const notifications = useOpenNotifications();
-  const dismiss = useDismissNotification();
   const updateProfile = useUpdateProfile();
 
   if (state.isLoading) return null;
   if (!state.neverAssessed && !state.due) return null;
 
   const first = state.neverAssessed;
-  const open = (notifications.data ?? []).filter((n) => n.kind === 'reassessment_due');
 
   return (
     <Card tone="alt" style={{ gap: spacing.md }}>
@@ -59,17 +52,15 @@ export function ReassessBanner() {
           <Button
             title={t('onboarding.remindLater')}
             variant="ghost"
-            onPress={() => {
-              // Dismissing only the notification row would leave the derived
-              // due date in the past, so the banner would return on the next
-              // render. Snoozing the profile is what actually quiets it.
-              open.forEach((n) => dismiss.mutate(n.id));
+            onPress={() =>
+              // The due date stays in the past, so only a stored snooze can
+              // quiet the banner; otherwise it returns on the next render.
               updateProfile.mutate({
                 reassess_snoozed_until: new Date(
                   Date.now() + SNOOZE_DAYS * 86_400_000,
                 ).toISOString(),
-              });
-            }}
+              })
+            }
           />
         ) : null}
       </View>

@@ -329,8 +329,6 @@ const en = {
     reassessment: 'Wheel reassessment',
     reassessmentHint: 'How often Muvozanat should suggest re-rating your eight areas.',
     interval: {
-      weekly: 'Every week',
-      biweekly: 'Every 2 weeks',
       monthly: 'Every month',
       quarterly: 'Every 3 months',
       semiannual: 'Every 6 months',

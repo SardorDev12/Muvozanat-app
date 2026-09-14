@@ -15,13 +15,15 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { formatTimestamp } from '@/utils/date';
 import { useNow } from '@/utils/useNow';
 
-type IntervalKey =
-  'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semiannual' | 'yearly' | 'off';
+type IntervalKey = 'monthly' | 'quarterly' | 'semiannual' | 'yearly' | 'off';
 
-/** Reminder cadences offered in settings. `null` turns reminders off. */
+/**
+ * How often to prompt for a new life wheel. `null` turns the prompt off.
+ *
+ * Nothing shorter than a month: a life wheel measures things that shift over
+ * seasons, so asking weekly would only train people to dismiss it.
+ */
 const INTERVALS: { key: IntervalKey; days: number | null }[] = [
-  { key: 'weekly', days: 7 },
-  { key: 'biweekly', days: 14 },
   { key: 'monthly', days: 30 },
   { key: 'quarterly', days: 90 },
   { key: 'semiannual', days: 182 },

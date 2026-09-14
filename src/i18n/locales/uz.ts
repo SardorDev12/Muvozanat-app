@@ -327,8 +327,6 @@ const uz: Translations = {
     reassessment: "G'ildirakni qayta baholash",
     reassessmentHint: 'Muvozanat sakkiz sohani qayta baholashni qanchalik tez-tez taklif qilsin.',
     interval: {
-      weekly: 'Har hafta',
-      biweekly: 'Har 2 haftada',
       monthly: 'Har oy',
       quarterly: 'Har 3 oyda',
       semiannual: 'Har 6 oyda',

@@ -87,7 +87,6 @@ export function useSaveAssessment() {
       if (!user) return;
       client.invalidateQueries({ queryKey: queryKeys.assessmentHistory(user.id) });
       client.invalidateQueries({ queryKey: queryKeys.profile(user.id) });
-      client.invalidateQueries({ queryKey: queryKeys.notifications(user.id) });
     },
   });
 }

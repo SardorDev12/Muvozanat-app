@@ -4,9 +4,9 @@ A life-balance app: rate eight areas of your life on a wheel, see where the
 wheel is flat, and turn the flat parts into goals you actually work on.
 
 One codebase — React Native + Expo Router — ships to **iOS, Android and the
-web**. Supabase holds the data and the auth. A Cloudflare Worker handles the
-one job that has to run when nobody has the app open: reminding you to
-reassess.
+web**. Supabase holds the data and the auth. Cloudflare serves the site. There
+is no server-side code of our own: the app talks to Postgres directly under Row
+Level Security.
 
 ---
 
@@ -44,19 +44,15 @@ mean.
 
 ## Stack
 
-| Layer            | Choice                                                        |
-| ---------------- | ------------------------------------------------------------- |
-| App              | Expo SDK 57, Expo Router, React Native 0.86, react-native-web |
-| Animation        | Reanimated 4 + react-native-svg                               |
-| Data             | Supabase (Postgres + Auth + RLS)                              |
-| Server-side jobs | Cloudflare Workers (cron)                                     |
-| State            | TanStack Query                                                |
-| i18n             | i18next — Uzbek, Russian, English                             |
+| Layer     | Choice                                                        |
+| --------- | ------------------------------------------------------------- |
+| App       | Expo SDK 57, Expo Router, React Native 0.86, react-native-web |
+| Animation | Reanimated 4 + react-native-svg                               |
+| Data      | Supabase (Postgres + Auth + RLS)                              |
+| State     | TanStack Query                                                |
+| i18n      | i18next — Uzbek, Russian, English                             |
 
-**Cloudflare's role is deliberately small.** All ordinary reads and writes go
-straight from the app to Supabase under Row Level Security. The Worker exists
-because a reassessment reminder has to fire on a schedule whether or not the app
-is open — that's the one job needing the service role key.
+**There is no backend of our own.** Every read and write goes straight from the app to Supabase under Row Level Security, which is therefore the entire access model. Cloudflare only serves files. Nothing ever needs the Supabase service_role key.
 
 ---
 
@@ -81,7 +77,6 @@ src/
   utils/date.ts           calendar-day helpers
 supabase/migrations/      schema, functions/triggers, RLS
 wrangler.toml             the website Worker (serves the exported build)
-workers/reminders/        the Cloudflare cron worker
 .github/workflows/        CI, EAS preview builds, OTA updates, deploys
 ```
 
@@ -119,9 +114,8 @@ Expo and GitHub dashboards. No command line, no local install: the workflows in
 this repo do every build and deploy.
 
 **Already wired up in the repo, nothing to do:** the EAS project id, owner and
-update URL in `app.json`; the SQL migrations; all five workflows; the Cloudflare
-Pages SPA fallback; and the worker's Supabase URL, which is injected at deploy
-time from your GitHub secret rather than committed.
+update URL in `app.json`; the SQL migrations; all four workflows; the Cloudflare
+SPA fallback in the site Worker's config.
 
 Work through the steps in order — each one produces a value the next needs.
 
@@ -134,16 +128,20 @@ Work through the steps in order — each one produces a value the next needs.
 2. **Create the schema.** **SQL Editor → New query**, then paste and run the
    files from `supabase/migrations/` **in filename order**:
 
-   | #   | File                                   | What it creates                          |
-   | --- | -------------------------------------- | ---------------------------------------- |
-   | 1   | `20260914000100_init.sql`              | enums, tables, indexes                   |
-   | 2   | `20260914000200_functions.sql`         | triggers, views, `save_assessment`       |
-   | 3   | `20260914000300_rls.sql`               | Row Level Security policies and grants   |
-   | 4   | `20260914000400_completion_rollup.sql` | `completed_at` and the completion rollup |
+   | #   | File                                    | What it creates                          |
+   | --- | --------------------------------------- | ---------------------------------------- |
+   | 1   | `20260914000100_init.sql`               | enums, tables, indexes                   |
+   | 2   | `20260914000200_functions.sql`          | triggers, views, `save_assessment`       |
+   | 3   | `20260914000300_rls.sql`                | Row Level Security policies and grants   |
+   | 4   | `20260914000400_completion_rollup.sql`  | `completed_at` and the completion rollup |
+   | 5   | `20260914000500_drop_notifications.sql` | drops the retired notifications table    |
 
-   The editor runs a script as one transaction, so you can also paste all four
+   The editor runs a script as one transaction, so you can also paste all five
    into a single query and run them together. Either way it should finish with
    "Success. No rows returned."
+
+   File 5 removes a table that a since-retired background job used to write to.
+   It is a no-op on a database that never had it, so it is safe either way.
 
    Row Level Security is switched on by file 3. There is nothing to enable when
    creating the project.
@@ -152,18 +150,15 @@ Work through the steps in order — each one produces a value the next needs.
 
    ```sql
    select count(*) as tables from information_schema.tables
-    where table_schema = 'public' and table_type = 'BASE TABLE';   -- 8
-   select count(*) as policies from pg_policies where schemaname = 'public';  -- 28
+    where table_schema = 'public' and table_type = 'BASE TABLE';   -- 7
+   select count(*) as policies from pg_policies where schemaname = 'public';  -- 26
    ```
 
 3. **Copy the keys.** **Project Settings → API**. Take the **Project URL** and
    the **anon / public** key — they become GitHub secrets in step 5.
 
-   The **service_role** key is on the same page. It bypasses Row Level
-   Security. It goes into the Cloudflare Worker in step 7 and **nowhere else** —
-   never a GitHub secret used by an app build, never anything prefixed
-   `EXPO_PUBLIC_`, because those are compiled into the JS bundle and readable by
-   anyone who opens the site.
+   The **service_role** key on that page is not needed anywhere in this
+   project. It bypasses Row Level Security, so leave it where it is.
 
    A local `.env` is only needed if you run the app on your own machine. If you
    build through GitHub Actions, skip it.
@@ -176,8 +171,7 @@ Work through the steps in order — each one produces a value the next needs.
 2. **My Profile → API Tokens → Create Token → Custom token**, with:
    - _Account → Workers Scripts → Edit_
 
-   That one permission covers both the website and the reminder cron, since
-   both are Workers.
+   The site is a Worker, so that single permission is all it needs.
 
 The site is an assets-only Worker, created automatically by the deploy workflow
 on its first run. Nothing to set up by hand.
@@ -261,24 +255,7 @@ wheel assessment.
 If sign-in with Google returns to a blank page, the redirect URL in step 4.3
 does not match your actual domain.
 
-### 7. The reminder worker
-
-The worker has to exist before it can be given a secret, and CI creates it on
-its first deploy.
-
-1. **Actions → Deploy reminder worker → Run workflow.**
-2. **Workers & Pages → muvozanat-reminders → Settings → Variables and Secrets →
-   Add**, type **Secret**, name `SUPABASE_SERVICE_ROLE_KEY`, value from step
-   1.3.
-3. Optionally add `ADMIN_TRIGGER_SECRET` the same way. It enables `POST /run`,
-   so you can trigger a sweep by hand instead of waiting for 06:00 UTC.
-4. Re-run the workflow so the worker picks the secret up.
-
-Secrets set in the dashboard survive later deploys, so this is a one-off.
-`SUPABASE_URL` is injected automatically from your GitHub secret — there is no
-placeholder to edit.
-
-### 8. Getting it on a phone
+### 7. Getting it on a phone
 
 **Actions → EAS native build → Run workflow**, pick a platform and the
 `preview` profile. It takes 10–20 minutes; the result appears on
@@ -296,7 +273,6 @@ Build again only when you add a native library or change `app.json`.
 ```bash
 npm install -g eas-cli supabase
 supabase link --project-ref <ref> && supabase db push
-cd workers/reminders && npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
 
 `eas init` and `eas update:configure` are not needed — `app.json` already has
@@ -310,13 +286,12 @@ the project id, owner and update URL.
 
 There is one branch, `main`. Every push to it deploys.
 
-| Workflow            | Trigger                              | Does                                                                                                       |
-| ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `ci.yml`            | push to `main`                       | lint, typecheck, unit tests, schema tests against a real Postgres, web export smoke test, worker typecheck |
-| `deploy-web.yml`    | push to `main`                       | exports the web build and deploys it as a Cloudflare Worker                                                |
-| `eas-update.yml`    | push to `main`                       | re-runs the checks, then publishes an over-the-air update to the `production` channel                      |
-| `deploy-worker.yml` | push to `main` touching `workers/**` | deploys the reminder worker                                                                                |
-| `eas-preview.yml`   | **manual only**                      | builds an installable Android / iOS app                                                                    |
+| Workflow          | Trigger         | Does                                                                                     |
+| ----------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| `ci.yml`          | push to `main`  | lint, typecheck, unit tests, schema tests against a real Postgres, web export smoke test |
+| `deploy-web.yml`  | push to `main`  | exports the web build and deploys it as a Cloudflare Worker                              |
+| `eas-update.yml`  | push to `main`  | re-runs the checks, then publishes an over-the-air update to the `production` channel    |
+| `eas-preview.yml` | **manual only** | builds an installable Android / iOS app                                                  |
 
 **Native builds are deliberately not automatic.** They take 10-20 minutes and
 use EAS build credits, and almost every change reaches an installed app as an

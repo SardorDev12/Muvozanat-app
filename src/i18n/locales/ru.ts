@@ -327,8 +327,6 @@ const ru: Translations = {
     reassessment: 'Переоценка колеса',
     reassessmentHint: 'Как часто Muvozanat должен предлагать переоценить восемь сфер.',
     interval: {
-      weekly: 'Каждую неделю',
-      biweekly: 'Раз в 2 недели',
       monthly: 'Раз в месяц',
       quarterly: 'Раз в 3 месяца',
       semiannual: 'Раз в 6 месяцев',

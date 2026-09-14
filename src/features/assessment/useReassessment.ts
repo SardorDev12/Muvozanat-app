@@ -1,4 +1,4 @@
-import { useOpenNotifications, useProfile } from '@/features/profile/queries';
+import { useProfile } from '@/features/profile/queries';
 import { daysBetween, toDateKey, todayKey } from '@/utils/date';
 import { useNow } from '@/utils/useNow';
 
@@ -13,13 +13,16 @@ export type ReassessmentState = {
 };
 
 /**
- * The app nudges from two directions: the profile's derived `next_reassess_at`
- * (so a user who opens the app before the nightly Worker run still sees it) and
- * any notification row the Worker has already written.
+ * Decides whether to prompt for a new life-wheel assessment.
+ *
+ * This is a plain comparison against the clock, done in the app: the profile's
+ * derived `next_reassess_at` against now, unless a "remind me later" snooze is
+ * still running. No server-side job is involved — one used to write nudge rows
+ * on a nightly cron, but it only duplicated this check, since a reminder is
+ * only ever seen when the app is open anyway.
  */
 export function useReassessment(): ReassessmentState {
   const profile = useProfile();
-  const notifications = useOpenNotifications();
   const now = useNow();
 
   const row = profile.data;
@@ -29,14 +32,13 @@ export function useReassessment(): ReassessmentState {
   const daysSinceLast = lastAt ? daysBetween(toDateKey(new Date(lastAt)), todayKey()) : null;
 
   const intervalElapsed = nextAt ? new Date(nextAt).getTime() <= now : false;
-  const workerFlagged = (notifications.data ?? []).some((n) => n.kind === 'reassessment_due');
 
   const snoozedUntil = row?.reassess_snoozed_until;
   const snoozed = snoozedUntil ? new Date(snoozedUntil).getTime() > now : false;
 
   return {
     neverAssessed: !!row && !lastAt,
-    due: !!lastAt && !snoozed && (intervalElapsed || workerFlagged),
+    due: !!lastAt && !snoozed && intervalElapsed,
     daysSinceLast,
     nextDueLabelDate: nextAt,
     isLoading: profile.isLoading,

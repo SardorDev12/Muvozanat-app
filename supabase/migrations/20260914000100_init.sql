@@ -168,20 +168,3 @@ create table public.task_completions (
 );
 
 create index task_completions_user_date_idx on public.task_completions (user_id, occurrence_date);
-
--- -------------------------------------------------------- notifications ----
-
--- Written by the Cloudflare Worker cron; read by the app to show the
--- "time to reassess" banner. Kept generic so later nudge types fit here too.
-create table public.notifications (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
-  kind text not null check (kind in ('reassessment_due')),
-  payload jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now(),
-  read_at timestamptz,
-  dismissed_at timestamptz
-);
-
-create index notifications_user_open_idx on public.notifications (user_id, created_at desc)
-  where dismissed_at is null;
