@@ -53,7 +53,8 @@ web-build/
 ios/
 android/
 
-# workers
+# workers — local wrangler/miniflare state, at the root and per worker
+.wrangler/
 workers/*/.wrangler/
 workers/*/node_modules/
 
