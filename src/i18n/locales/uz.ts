@@ -50,9 +50,9 @@ const uz: Translations = {
     sendResetLink: 'Havola yuborish',
     confirmEmail:
       "{{email}} manziliga tasdiqlash havolasini yubordik. Ro'yxatdan o'tishni yakunlash uchun uni tasdiqlang.",
-    welcomeTitle: 'Muvozanat halol qarashdan boshlanadi',
+    welcomeTitle: "Hayot faqat bir yo'nalishdan iborat emas.",
     welcomeSubtitle:
-      "Hayotingizning sakkiz sohasini baholang, g'ildirak qayerda cho'kkanini ko'ring va buni haqiqatan ustida ishlaydigan maqsadlarga aylantiring.",
+      "Hayotingizning sakkiz sohasini baholang, kuchsiz yo'nalishni aniqlang va buni haqiqatan ustida ishlaydigan maqsadlarga aylantiring.",
     passwordTooShort: "Parol kamida 8 ta belgidan iborat bo'lishi kerak.",
     invalidEmail: "To'g'ri elektron pochta manzilini kiriting.",
     displayName: 'Ism',
