@@ -21,24 +21,29 @@ export type TaskInput = {
 };
 
 /**
- * All active tasks. A personal planner holds tens, not thousands, of task
- * rows — recurring tasks are one row each — so fetching them together and
- * expanding occurrences on the client is both simpler and fewer round trips
- * than querying per day.
+ * Live tasks, plus any finished recently enough to still show in a visible
+ * list. A personal planner holds tens, not thousands, of task rows — recurring
+ * tasks are one row each — so fetching them together and expanding occurrences
+ * on the client is both simpler and fewer round trips than querying per day.
+ *
+ * `finishedSince` stops retired tasks piling up in this fetch forever while
+ * still returning the ones the Completed section needs to render.
  */
-export function useTasks() {
+export function useTasks(finishedSince?: DateKey) {
   const { user } = useAuth();
   const userId = user?.id;
 
   return useQuery({
-    queryKey: queryKeys.tasks(userId ?? 'anonymous'),
+    queryKey: [...queryKeys.tasks(userId ?? 'anonymous'), finishedSince ?? 'all'],
     enabled: !!userId,
     queryFn: async (): Promise<TaskRow[]> => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', userId!)
-        .eq('status', 'active')
+      let query = supabase.from('tasks').select('*').eq('user_id', userId!).eq('status', 'active');
+
+      if (finishedSince) {
+        query = query.or(`completed_at.is.null,completed_at.gte.${finishedSince}`);
+      }
+
+      const { data, error } = await query
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -69,8 +74,8 @@ export function useCompletions(from: DateKey, to: DateKey) {
 
 /** The three lists the Today screen renders. */
 export function useTodayLists(lookbackDays: number, date: DateKey = todayKey()) {
-  const tasks = useTasks();
   const from = addDays(date, -Math.max(1, lookbackDays));
+  const tasks = useTasks(from);
   const completions = useCompletions(from, date);
 
   const lists = useMemo<TodayLists<TaskRow>>(
@@ -189,9 +194,25 @@ export function useDeleteTask() {
 }
 
 /**
- * Records (or clears) what happened to one occurrence of a task. Passing
- * `null` removes the row, which is how "un-complete" works — the absence of a
- * row is the canonical "not done yet".
+ * How much of a task the user meant to finish.
+ *
+ * `occurrence` closes out today's run and leaves a repeating task live;
+ * `task` retires the task itself, which is what rolls its component — and in
+ * turn its goal — up to complete. For a one-off task the two are the same
+ * thing, so the UI only asks when the task repeats.
+ */
+export type CompletionScope = 'occurrence' | 'task';
+
+/**
+ * Records (or clears) what happened to one occurrence of a task, and keeps
+ * `tasks.completed_at` in step.
+ *
+ * Clearing removes the occurrence row — the absence of a row is the canonical
+ * "not done yet" — and also un-retires the task, so unticking something always
+ * lands back in a state the user can act on.
+ *
+ * Both writes go through one mutation so the two can never end up half
+ * applied: a retired task with no completion row would vanish from every list.
  */
 export function useSetOccurrenceStatus() {
   const { user } = useAuth();
@@ -202,10 +223,12 @@ export function useSetOccurrenceStatus() {
       taskId,
       date,
       status,
+      scope = 'occurrence',
     }: {
       taskId: string;
       date: DateKey;
       status: 'done' | 'skipped' | null;
+      scope?: CompletionScope;
     }) => {
       if (!user) throw new Error('Not signed in');
 
@@ -216,6 +239,13 @@ export function useSetOccurrenceStatus() {
           .eq('task_id', taskId)
           .eq('occurrence_date', date);
         if (error) throw error;
+
+        const { error: reopenError } = await supabase
+          .from('tasks')
+          .update({ completed_at: null })
+          .eq('id', taskId)
+          .not('completed_at', 'is', null);
+        if (reopenError) throw reopenError;
         return;
       }
 
@@ -230,8 +260,36 @@ export function useSetOccurrenceStatus() {
         { onConflict: 'task_id,occurrence_date' },
       );
       if (error) throw error;
+
+      // Only a 'done' can retire a task; skipping an occurrence never does.
+      if (scope === 'task' && status === 'done') {
+        const { error: retireError } = await supabase
+          .from('tasks')
+          .update({ completed_at: new Date().toISOString() })
+          .eq('id', taskId);
+        if (retireError) throw retireError;
+      }
     },
     onSuccess: () => invalidate(),
+  });
+}
+
+/** Reopens a finished task without touching its occurrence history. */
+export function useReopenTask() {
+  const invalidate = useTaskInvalidation();
+
+  return useMutation({
+    mutationFn: async (task: TaskRow) => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({ completed_at: null })
+        .eq('id', task.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (task) => invalidate(task.goal_id),
   });
 }
 

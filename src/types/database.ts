@@ -76,6 +76,8 @@ export type TaskRow = {
   starts_on: string | null;
   recurrence: Recurrence | null;
   status: TaskStatus;
+  /** Set when the whole task is finished, not merely one occurrence of it. */
+  completed_at: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -138,9 +140,13 @@ export type Database = {
       >;
       tasks: Table<
         TaskRow,
-        Omit<TaskRow, 'id' | 'created_at' | 'updated_at' | 'status' | 'sort_order'> & {
+        Omit<
+          TaskRow,
+          'id' | 'created_at' | 'updated_at' | 'status' | 'sort_order' | 'completed_at'
+        > & {
           id?: string;
           status?: TaskStatus;
+          completed_at?: string | null;
           sort_order?: number;
         }
       >;

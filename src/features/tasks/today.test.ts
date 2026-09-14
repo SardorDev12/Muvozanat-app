@@ -17,6 +17,7 @@ type T = {
   due_date: string | null;
   starts_on: string | null;
   recurrence: Recurrence | null;
+  completed_at?: string | null;
 };
 
 const oneOff = (id: string, due: string): T => ({
@@ -32,6 +33,9 @@ const daily = (id: string, starts: string): T => ({
   starts_on: starts,
   recurrence: { freq: 'daily', interval: 1 },
 });
+
+/** A task the user finished outright, not merely ticked off for one day. */
+const retired = (task: T, at = '2026-09-14T09:00:00.000Z'): T => ({ ...task, completed_at: at });
 
 test('a one-off due today is pending until completed', () => {
   const tasks = [oneOff('a', TODAY)];
@@ -107,4 +111,32 @@ test('a task that does not recur today is absent from both lists', () => {
   const lists = buildTodayLists([weekly], [], TODAY, 14);
   assert.equal(lists.pending.length, 0);
   assert.equal(lists.missed.length, 0);
+});
+
+test('a retired task still shows on the day it was closed out', () => {
+  const task = retired(daily('d', '2026-09-10'));
+  const completions: CompletionLike[] = [{ task_id: 'd', occurrence_date: TODAY, status: 'done' }];
+  const lists = buildTodayLists([task], completions, TODAY, 14);
+  assert.equal(lists.pending.length, 0);
+  assert.equal(lists.completed.length, 1);
+});
+
+test('a retired task does not come back as pending the next day', () => {
+  const task = retired(daily('d', '2026-09-10'));
+  const completions: CompletionLike[] = [{ task_id: 'd', occurrence_date: TODAY, status: 'done' }];
+  const lists = buildTodayLists([task], completions, '2026-09-15', 14);
+  assert.equal(lists.pending.length, 0);
+  assert.equal(lists.completed.length, 0);
+});
+
+test('retiring a task clears the missed backlog it had accumulated', () => {
+  const live = daily('d', '2026-09-01');
+  assert.ok(missedOccurrences([live], [], TODAY, 14).length > 0);
+  assert.deepStrictEqual(missedOccurrences([retired(live)], [], TODAY, 14), []);
+});
+
+test('a live recurring task is unaffected by the retirement rule', () => {
+  const lists = buildTodayLists([daily('d', '2026-09-10')], [], TODAY, 2);
+  assert.equal(lists.pending.length, 1);
+  assert.equal(lists.missed.length, 2);
 });

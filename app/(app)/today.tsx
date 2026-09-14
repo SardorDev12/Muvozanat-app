@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GoalStrip } from '@/components/GoalStrip';
 import { ReassessBanner } from '@/components/ReassessBanner';
+import { TaskCompletionSheet } from '@/components/TaskCompletionSheet';
 import { TaskEditorSheet } from '@/components/TaskEditorSheet';
 import { TaskItem } from '@/components/TaskItem';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +13,12 @@ import { Card } from '@/components/ui/Card';
 import { CONTENT_MAX_WIDTH } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useGoalProgress, useGoals } from '@/features/goals/queries';
-import { useSetOccurrenceStatus, useTodayLists } from '@/features/tasks/queries';
+import {
+  useSetOccurrenceStatus,
+  useTodayLists,
+  type CompletionScope,
+} from '@/features/tasks/queries';
+import { isRecurring } from '@/features/tasks/recurrence';
 import type { Occurrence } from '@/features/tasks/today';
 import { useProfile } from '@/features/profile/queries';
 import { intlLocale } from '@/i18n';
@@ -44,6 +50,7 @@ export default function TodayScreen() {
 
   const [missedOpen, setMissedOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [completionPrompt, setCompletionPrompt] = useState<Occurrence<TaskRow> | null>(null);
   const [editorTask, setEditorTask] = useState<TaskRow | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,12 +60,30 @@ export default function TodayScreen() {
     [goals.data],
   );
 
-  function toggle(occurrence: Occurrence<TaskRow>) {
+  function complete(occurrence: Occurrence<TaskRow>, scope: CompletionScope) {
     setStatus.mutate({
       taskId: occurrence.task.id,
       date: occurrence.date,
-      status: occurrence.status === 'done' ? null : 'done',
+      status: 'done',
+      scope,
     });
+  }
+
+  function toggle(occurrence: Occurrence<TaskRow>) {
+    if (occurrence.status === 'done') {
+      // Unticking is never ambiguous: it clears the occurrence and, if the
+      // task had been retired, brings it back.
+      setStatus.mutate({ taskId: occurrence.task.id, date: occurrence.date, status: null });
+      return;
+    }
+
+    // A one-off task has only one thing it could mean, so don't ask.
+    if (!isRecurring(occurrence.task)) {
+      complete(occurrence, 'task');
+      return;
+    }
+
+    setCompletionPrompt(occurrence);
   }
 
   function openEditor(task: TaskRow | null) {
@@ -229,6 +254,16 @@ export default function TodayScreen() {
           style={{ alignSelf: 'center', minWidth: 200 }}
         />
       </View>
+
+      <TaskCompletionSheet
+        visible={!!completionPrompt}
+        taskTitle={completionPrompt?.task.title ?? ''}
+        onClose={() => setCompletionPrompt(null)}
+        onChoose={(scope) => {
+          if (completionPrompt) complete(completionPrompt, scope);
+          setCompletionPrompt(null);
+        }}
+      />
 
       <TaskEditorSheet
         visible={editorOpen}

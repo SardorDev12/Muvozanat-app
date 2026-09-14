@@ -15,6 +15,16 @@ surface moves between SDKs.
 - **Recurring tasks are one row.** Occurrences are expanded in TypeScript
   (`src/features/tasks/recurrence.ts`); only completions and skips get rows.
   Never materialise occurrences into the database.
+- **A task has two notions of "done".** A `task_completions` row means _this
+  occurrence_ is handled; `tasks.completed_at` means _the task itself_ is
+  finished. Only the second one rolls up. For a repeating task the UI asks
+  which the user meant; for a one-off it completes both without asking.
+- **Completion rolls upward in the database, not the client.** Triggers in
+  `20260914000400_completion_rollup.sql` recompute component status from its
+  tasks and goal status from its components and direct tasks. A component or
+  goal with no children keeps whatever status the user set by hand. Never
+  compute a parent's completion in the app — it would disagree with whatever
+  another client wrote.
 - **Life area keys are a Postgres enum.** Changing `LIFE_AREA_KEYS` in
   `src/features/assessment/areas.ts` requires a migration.
 - **RLS is the whole access model.** The app talks to Postgres directly with the

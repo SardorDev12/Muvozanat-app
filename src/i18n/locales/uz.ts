@@ -253,6 +253,16 @@ const uz: Translations = {
     unskip: 'Qaytarish',
     skipped: "O'tkazib yuborilgan",
     moveToToday: "Bugunga ko'chirish",
+    completionTitle: 'Aynan nimasi bajarildi?',
+    completionBody:
+      "Bu vazifa takrorlanadi. Bugunga belgilash uni davom ettiradi, to'liq yakunlash esa butunlay yopadi.",
+    doneForToday: 'Bugunga bajarildi',
+    doneForTodayHint: 'Faqat shu safarni yopadi. Vazifa takrorlanishda davom etadi.',
+    doneCompletely: "Vazifa to'liq bajarildi",
+    doneCompletelyHint: "Vazifani yakunlaydi va uni o'z qismiga hisoblaydi.",
+    reopenTask: 'Vazifani qayta ochish',
+    finished: 'Yakunlangan',
+    rollupHint: "Barcha vazifalar bajarilganda o'zi yopiladi.",
   },
   recurrence: {
     label: 'Takrorlash',

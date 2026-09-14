@@ -32,6 +32,14 @@ a goal, or off nothing at all. Tasks repeat with a Google Tasks-style rule —
 daily, weekly on chosen days, monthly on a date or an _nth weekday_, yearly,
 every N units, ending never / on a date / after N occurrences.
 
+Completion **rolls upward**: finish every task in a component and the component
+closes itself; close every component (and every task hanging straight off the
+goal) and the goal closes itself. Because of that, ticking a repeating task has
+to be unambiguous — so the app asks whether you mean _done for today_ or _task
+fully complete_. Only the second retires the task and counts towards its
+component. One-off tasks skip the question; there is only one thing they can
+mean.
+
 ---
 
 ## Stack
@@ -78,7 +86,7 @@ workers/reminders/        the Cloudflare cron worker
 
 ---
 
-## Two design decisions worth knowing
+## Three design decisions worth knowing
 
 **Recurring tasks are a single row.** A task that repeats every weekday forever
 is one row with a recurrence rule, not 250 rows a year. Occurrences are expanded
@@ -87,6 +95,14 @@ screen needs — one day for Today, the missed-lookback window for the missed
 list. Only _deviations_ get stored: the absence of a `task_completions` row is
 the canonical "not done yet", which is also what makes un-completing a task a
 delete rather than a state flag.
+
+**Completion rolls up in Postgres, not in the app.** Triggers recompute a
+component's status from its tasks, and a goal's from its components plus its
+direct tasks, writing only on an actual change so the two triggers cannot
+ping-pong. Keeping it in the database means the invariant holds whichever client
+wrote last, and the rule lives in one place instead of in every screen that can
+complete something. A component or goal with no children keeps whatever status
+you set by hand.
 
 **Dates are calendar days, not instants.** A task due "today" is due on _your_
 local today. Everything crossing the API boundary is a `YYYY-MM-DD` string and

@@ -80,6 +80,12 @@ export function TaskItem({ occurrence, goal, onToggleDone, onPress, showDate }: 
         <Text variant="caption" tone="faint">
           {t('tasks.skipped')}
         </Text>
+      ) : task.completed_at ? (
+        // Distinguishes "I did today's run" from "this task is retired" — both
+        // render struck through, but only one of them counts towards the goal.
+        <Text variant="caption" tone="success">
+          {t('tasks.finished')}
+        </Text>
       ) : goal ? (
         <View style={[styles.dot, { backgroundColor: accent }]} />
       ) : null}

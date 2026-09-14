@@ -250,6 +250,16 @@ const en = {
     unskip: 'Un-skip',
     skipped: 'Skipped',
     moveToToday: 'Move to today',
+    completionTitle: 'How much is done?',
+    completionBody:
+      'This task repeats. Closing out today keeps it going; finishing it retires it for good.',
+    doneForToday: 'Done for today',
+    doneForTodayHint: 'Ticks off this one run. The task keeps repeating.',
+    doneCompletely: 'Task fully complete',
+    doneCompletelyHint: 'Retires the task and counts it towards its component.',
+    reopenTask: 'Reopen task',
+    finished: 'Finished',
+    rollupHint: 'Completes on its own when every task is done.',
   },
   recurrence: {
     label: 'Repeat',

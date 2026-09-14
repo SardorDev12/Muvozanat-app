@@ -23,7 +23,7 @@ import {
   useUpdateGoal,
 } from '@/features/goals/queries';
 import { useRecurrenceLabel } from '@/features/tasks/describe';
-import { useTasksForGoal } from '@/features/tasks/queries';
+import { useTasksForGoal, useUpdateTask } from '@/features/tasks/queries';
 import { nextOccurrence } from '@/features/tasks/recurrence';
 import { intlLocale } from '@/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -42,14 +42,28 @@ function confirmDestructive(title: string, message: string, onConfirm: () => voi
   ]);
 }
 
-/** One task row inside a goal — shows what it is and when it next comes up. */
-function GoalTaskRow({ task, onPress }: { task: TaskRow; onPress: () => void }) {
+/**
+ * One task row inside a goal. The checkbox here means "is this task finished",
+ * not "did I do it today" — finishing the last task in a component is what
+ * rolls the component, and then the goal, up to complete.
+ */
+function GoalTaskRow({
+  task,
+  accent,
+  onPress,
+}: {
+  task: TaskRow;
+  accent: string;
+  onPress: () => void;
+}) {
   const { colors, radius, spacing } = useTheme();
   const { t, i18n } = useTranslation();
   const describe = useRecurrenceLabel();
+  const updateTask = useUpdateTask();
   const locale = intlLocale(i18n.language);
   const today = useTodayKey();
 
+  const finished = !!task.completed_at;
   const next = nextOccurrence(task, today);
   const subtitle = task.recurrence
     ? describe(task.recurrence, task.starts_on)
@@ -71,11 +85,28 @@ function GoalTaskRow({ task, onPress }: { task: TaskRow; onPress: () => void }) 
         },
       ]}
     >
+      <Checkbox
+        checked={finished}
+        color={accent}
+        accessibilityLabel={finished ? t('tasks.reopenTask') : t('tasks.doneCompletely')}
+        onToggle={() =>
+          updateTask.mutate({
+            id: task.id,
+            patch: { completed_at: finished ? null : new Date().toISOString() },
+          })
+        }
+      />
       <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="body">{task.title}</Text>
+        <Text
+          variant="body"
+          tone={finished ? 'faint' : 'default'}
+          style={finished ? styles.struck : undefined}
+        >
+          {task.title}
+        </Text>
         <Text variant="caption" tone="faint">
           {subtitle}
-          {next && task.recurrence ? ` · ${formatDate(next, locale)}` : ''}
+          {next && task.recurrence && !finished ? ` · ${formatDate(next, locale)}` : ''}
         </Text>
       </View>
       <Text variant="body" tone="faint">
@@ -178,27 +209,48 @@ export default function GoalDetailScreen() {
           ) : (
             (components.data ?? []).map((component) => {
               const componentTasks = tasksByComponent.get(component.id) ?? [];
+              const componentDone = component.status === 'done';
+              // Once a component has tasks its status is derived by the
+              // database rollup — every task finished means the component is
+              // finished. A manual toggle would just be overwritten by the next
+              // task write, so the checkbox becomes a read-out. An empty
+              // component has nothing to derive from and stays manual.
+              const derived = componentTasks.length > 0;
+              const finishedTasks = componentTasks.filter((task) => !!task.completed_at).length;
+
               return (
                 <View key={component.id} style={{ gap: spacing.sm }}>
                   <View style={styles.componentHeader}>
                     <Checkbox
-                      checked={component.status === 'done'}
+                      checked={componentDone}
                       color={area.color}
+                      disabled={derived}
                       accessibilityLabel={component.title}
                       onToggle={() =>
                         updateComponent.mutate({
                           id: component.id,
-                          patch: { status: component.status === 'done' ? 'active' : 'done' },
+                          patch: { status: componentDone ? 'active' : 'done' },
                         })
                       }
                     />
-                    <Text
-                      variant="heading"
-                      style={[{ flex: 1 }, component.status === 'done' ? styles.struck : null]}
-                      tone={component.status === 'done' ? 'faint' : 'default'}
-                    >
-                      {component.title}
-                    </Text>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text
+                        variant="heading"
+                        style={componentDone ? styles.struck : undefined}
+                        tone={componentDone ? 'faint' : 'default'}
+                      >
+                        {component.title}
+                      </Text>
+                      {derived ? (
+                        <Text variant="caption" tone="faint">
+                          {t('goals.progress', {
+                            done: finishedTasks,
+                            total: componentTasks.length,
+                          })}{' '}
+                          · {t('tasks.rollupHint')}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
 
                   <View style={{ gap: spacing.sm, paddingLeft: spacing.xl }}>
@@ -206,6 +258,7 @@ export default function GoalDetailScreen() {
                       <GoalTaskRow
                         key={task.id}
                         task={task}
+                        accent={area.color}
                         onPress={() => openTaskEditor(task, component.id)}
                       />
                     ))}
@@ -255,7 +308,12 @@ export default function GoalDetailScreen() {
         <Card style={{ gap: spacing.md }}>
           <Text variant="heading">{t('goals.directTasks')}</Text>
           {directTasks.map((task) => (
-            <GoalTaskRow key={task.id} task={task} onPress={() => openTaskEditor(task, null)} />
+            <GoalTaskRow
+              key={task.id}
+              task={task}
+              accent={area.color}
+              onPress={() => openTaskEditor(task, null)}
+            />
           ))}
           <Pressable
             accessibilityRole="button"

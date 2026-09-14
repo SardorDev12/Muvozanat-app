@@ -11,7 +11,11 @@ import { occurrencesBetween, type Schedulable } from './recurrence';
 
 export type OccurrenceStatus = 'pending' | 'done' | 'skipped';
 
-export type TaskLike = Schedulable & { id: string };
+export type TaskLike = Schedulable & {
+  id: string;
+  /** Set once the task itself is finished, not merely one of its occurrences. */
+  completed_at?: string | null;
+};
 
 export type CompletionLike = {
   task_id: string;
@@ -39,6 +43,16 @@ export function indexCompletions(
   return map;
 }
 
+/**
+ * A task the user has finished outright is retired: its rule may still match
+ * future dates, but the only occurrences that still count are the ones that
+ * actually happened. That keeps a retired habit in the day it was closed out
+ * without resurrecting it tomorrow or back-filling it as missed.
+ */
+function isRetired(task: TaskLike): boolean {
+  return !!task.completed_at;
+}
+
 /** Everything due on `date`, whatever its completion state. */
 export function occurrencesForDay<T extends TaskLike>(
   tasks: readonly T[],
@@ -53,7 +67,8 @@ export function occurrencesForDay<T extends TaskLike>(
       task,
       date,
       status: index.get(completionKey(task.id, date)) ?? 'pending',
-    }));
+    }))
+    .filter((occurrence) => !isRetired(occurrence.task) || occurrence.status !== 'pending');
 }
 
 /**
@@ -76,6 +91,7 @@ export function missedOccurrences<T extends TaskLike>(
   const missed: Occurrence<T>[] = [];
 
   for (const task of tasks) {
+    if (isRetired(task)) continue;
     for (const date of occurrencesBetween(task, from, until)) {
       if (index.has(completionKey(task.id, date))) continue;
       missed.push({ task, date, status: 'pending' });
