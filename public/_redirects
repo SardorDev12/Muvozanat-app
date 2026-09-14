@@ -1,0 +1,12 @@
+# Cloudflare Pages SPA fallback.
+#
+# Expo Router's web build is a single-page app: one index.html plus a JS
+# bundle, with routing done in the browser. Pages serves static files, so
+# without this rule a request for /today or a refresh on /goals/<id> looks for
+# a file that was never emitted and returns a 404. The 200 (rather than a
+# redirect) hands back index.html while keeping the URL, so the router can
+# read the path and render the right screen.
+#
+# Anything under /_expo/ is a real emitted file and is matched before this
+# catch-all, so bundles and assets are unaffected.
+/*    /index.html   200

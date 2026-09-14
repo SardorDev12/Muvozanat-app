@@ -10,6 +10,18 @@ surface moves between SDKs.
   `expo/node_modules`, so a project-level babel config cannot resolve it and
   Metro fails to construct a transformer. The preset already adds
   `react-native-worklets/plugin` automatically when the package is installed.
+- **Web output stays `"single"`, and `public/_redirects` must ship.** Expo
+  Router's web build is a SPA, so without the `/* /index.html 200` rule
+  Cloudflare Pages 404s on `/today` or a refresh of `/goals/<id>`. `"static"`
+  was tried and reverted: every route sits behind a client-side auth gate, so
+  prerendering emits only wrapper divs, and those wrappers hydrate against a
+  different theme and safe-area measurement — React error #418 on every page
+  load, in both colour schemes. The only thing static bought was `<head>` tags.
+  `app/+html.tsx` is ignored under `"single"`; do not add one back expecting it
+  to apply.
+- **i18next initialises synchronously at import.** Gating the tree on an async
+  init cost a blank first frame on every launch. `hydrateStoredLanguage()`
+  applies a saved preference after the first paint.
 - **Dates are calendar days, not instants.** Anything crossing the API boundary
   is a `YYYY-MM-DD` string. See `src/utils/date.ts`.
 - **Recurring tasks are one row.** Occurrences are expanded in TypeScript

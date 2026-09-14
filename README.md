@@ -136,8 +136,11 @@ this repo do the builds and deploys for you.
    Each one should finish with "Success. No rows returned."
 
 3. **Copy the keys.** **Project Settings → API**. You need the **Project URL**
-   and the **anon / public** key. Put them in your local `.env` (copy
-   `.env.example`) and, later, into GitHub secrets.
+   and the **anon / public** key. They go into the GitHub secrets in step 6.
+
+   A local `.env` (copy `.env.example`) is only needed if you run the app on
+   your own machine. If you build and deploy entirely through GitHub Actions,
+   skip it — the secrets are the only place these values have to exist.
 
    The **service_role** key is on the same page. It bypasses Row Level
    Security — it goes into the Cloudflare Worker only, never into `.env` and
@@ -261,7 +264,10 @@ Secrets set in the dashboard survive later deploys, so this is a one-off.
 
 ### 8. Run and build it
 
-- **Web, locally**: `npm install`, then `npm run web`.
+- **Web**: pushing to `dev` or `main` exports the site and deploys it to
+  Cloudflare Pages. `public/_redirects` ships the SPA fallback rule, so deep
+  links like `/goals/<id>` and page refreshes resolve instead of 404ing.
+  Running locally (`npm install && npm run web`) is optional.
 - **On a phone, no Mac or Android Studio needed**: **Actions → EAS preview
   build → Run workflow**, pick a platform. When it finishes, the build appears
   under your project on [expo.dev](https://expo.dev) with a QR code and an

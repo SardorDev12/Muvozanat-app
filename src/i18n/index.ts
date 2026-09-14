@@ -18,6 +18,7 @@ export const SUPPORTED_LANGUAGES = [
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 const LANGUAGE_STORAGE_KEY = 'muvozanat.language';
+const FALLBACK: LanguageCode = 'uz';
 
 export const resources = {
   en: { translation: en },
@@ -25,41 +26,57 @@ export const resources = {
   uz: { translation: uz },
 } as const;
 
-function detectDeviceLanguage(): LanguageCode {
-  const tags = Localization.getLocales().map((l) => l.languageCode);
-  for (const tag of tags) {
-    if (tag === 'uz' || tag === 'ru' || tag === 'en') return tag;
-  }
-  return 'uz';
+function isSupported(code: string | null | undefined): code is LanguageCode {
+  return code === 'uz' || code === 'ru' || code === 'en';
 }
 
-export async function initI18n(): Promise<LanguageCode> {
-  let stored: LanguageCode | null = null;
+function detectDeviceLanguage(): LanguageCode {
   try {
-    const raw = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (raw === 'uz' || raw === 'ru' || raw === 'en') stored = raw;
+    for (const locale of Localization.getLocales()) {
+      if (isSupported(locale.languageCode)) return locale.languageCode;
+    }
   } catch {
-    // Storage is unavailable (private browsing, cleared site data) — fall back
-    // to device detection rather than blocking startup.
+    // Static web prerendering runs this in Node, where there is no device
+    // locale to read. The fallback is correct there and the real language is
+    // applied as soon as the page hydrates.
   }
+  return FALLBACK;
+}
 
-  const language = stored ?? detectDeviceLanguage();
+/**
+ * Translations are bundled, so i18next initialises synchronously at import.
+ *
+ * This matters beyond tidiness: gating the whole app on an async init meant a
+ * blank first frame on every launch, and it made static web rendering emit
+ * empty HTML — no title, no content — because effects never run during a
+ * prerender.
+ */
+i18n.use(initReactI18next).init({
+  resources,
+  lng: detectDeviceLanguage(),
+  fallbackLng: 'en',
+  defaultNS: 'translation',
+  interpolation: { escapeValue: false },
+  returnNull: false,
+  compatibilityJSON: 'v4',
+  initImmediate: false,
+});
 
-  if (!i18n.isInitialized) {
-    await i18n.use(initReactI18next).init({
-      resources,
-      lng: language,
-      fallbackLng: 'en',
-      defaultNS: 'translation',
-      interpolation: { escapeValue: false },
-      returnNull: false,
-      compatibilityJSON: 'v4',
-    });
-  } else {
-    await i18n.changeLanguage(language);
+/**
+ * Applies a previously chosen language. Runs after the first paint: reading it
+ * is async, and the device language is a good enough guess to render with in
+ * the meantime.
+ */
+export async function hydrateStoredLanguage(): Promise<void> {
+  try {
+    const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (isSupported(stored) && stored !== i18n.language) {
+      await i18n.changeLanguage(stored);
+    }
+  } catch {
+    // Storage unavailable (private browsing, cleared site data). The detected
+    // language stays in force, which is a reasonable outcome.
   }
-
-  return language;
 }
 
 export async function setLanguage(code: LanguageCode): Promise<void> {

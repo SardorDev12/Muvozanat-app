@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0E1116"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.muvozanat.mobile"

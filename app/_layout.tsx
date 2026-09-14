@@ -1,12 +1,12 @@
 import { Stack, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
-import { initI18n } from '@/i18n';
+import { hydrateStoredLanguage } from '@/i18n';
 import { QueryProvider } from '@/state/QueryProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
@@ -37,21 +37,14 @@ function RootStack() {
 }
 
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
-
+  // i18next is already initialised at import with the device language, so
+  // there is nothing to wait for before the first paint. A stored preference,
+  // which needs an async read, is applied once it arrives.
   useEffect(() => {
-    initI18n()
-      .catch(() => {
-        // Translation loading should never block the app from starting.
-      })
-      .finally(() => setReady(true));
+    hydrateStoredLanguage().finally(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    });
   }, []);
-
-  useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
-
-  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
