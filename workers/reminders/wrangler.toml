@@ -10,8 +10,12 @@ crons = ["0 6 * * *"]
 [observability]
 enabled = true
 
-[vars]
-SUPABASE_URL = "https://your-project.supabase.co"
-# Set as secrets, never here:
-#   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-#   wrangler secret put ADMIN_TRIGGER_SECRET
+# SUPABASE_URL is injected at deploy time from the EXPO_PUBLIC_SUPABASE_URL
+# repository secret (see .github/workflows/deploy-worker.yml), so there is one
+# source of truth and no placeholder that can quietly ship to production.
+# For `wrangler dev`, put it in a git-ignored .dev.vars file instead.
+#
+# The real secrets are set once in the Cloudflare dashboard, under
+# Workers & Pages -> muvozanat-reminders -> Settings -> Variables and Secrets:
+#   SUPABASE_SERVICE_ROLE_KEY   (required)
+#   ADMIN_TRIGGER_SECRET        (optional; enables POST /run)

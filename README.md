@@ -222,10 +222,10 @@ this repo do the builds and deploys for you.
 3. **Create the Pages project up front** so the deploy has somewhere to go:
    **Workers & Pages → Create → Pages → Upload assets**, name it exactly
    `muvozanat`. You can upload nothing; CI replaces the contents.
-4. Edit `workers/reminders/wrangler.toml` and set `SUPABASE_URL` to your
-   project URL. Commit it.
+   The Pages project must exist before the first deploy targets it, otherwise
+   the deploy step fails even with a valid token.
 
-### 6. GitHub — secrets, label, and default branch
+### 6. GitHub — secrets
 
 **Settings → Secrets and variables → Actions → New repository secret**:
 

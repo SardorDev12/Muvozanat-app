@@ -30,6 +30,26 @@ jobs:
 
       - run: npm ci
 
+      # Turns a cryptic downstream auth error into a message that names the
+      # secret and where to add it.
+      - name: Check required secrets
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=""
+          [ -n "$EXPO_TOKEN" ] || missing="$missing EXPO_TOKEN"
+          [ -n "$EXPO_PUBLIC_SUPABASE_URL" ] || missing="$missing EXPO_PUBLIC_SUPABASE_URL"
+          [ -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ] || missing="$missing EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing"
+            echo "Add them under Settings -> Secrets and variables -> Actions." >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing:$missing" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+
       # An OTA update reaches installed apps without any review step, so it
       # runs the same checks a pull request would get.
       - run: npm run lint
