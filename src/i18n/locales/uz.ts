@@ -66,7 +66,7 @@ const uz: Translations = {
     reassessTitle: "G'ildirakka qaytish vaqti keldi",
     reassessBody: "Oxirgi baholashdan {{days}} kun o'tdi. Nima o'zgarganini ko'ring.",
     reassessNow: 'Hozir baholash',
-    remindLater: 'Keyinroq eslating',
+    remindLater: 'Keyinroq eslat.',
   },
   areas: {
     health: {
