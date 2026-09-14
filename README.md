@@ -182,9 +182,8 @@ Work through the steps in order — each one produces a value the next needs.
 The site is an assets-only Worker, created automatically by the deploy workflow
 on its first run. Nothing to set up by hand.
 
-Your web address will be **`https://muvozanat.<your-subdomain>.workers.dev`**.
-The exact value appears in the Deploy step's log the first time it runs, and
-under **Workers & Pages → muvozanat** afterwards. Step 4 needs it.
+Your web address will be **`https://muvozanat.sardorfarhodogli.workers.dev`**.
+The Deploy step's log prints it on every run. Step 4 needs it.
 
 ### 3. Google Cloud — the sign-in client
 
@@ -213,11 +212,11 @@ under **Workers & Pages → muvozanat** afterwards. Step 4 needs it.
 2. **Email** is on by default. While testing, turning **Confirm email** off
    lets you sign up without checking your inbox.
 3. **Authentication → URL Configuration**:
-   - **Site URL**: your workers.dev address from step 2
+   - **Site URL**: `https://muvozanat.sardorfarhodogli.workers.dev`
    - **Redirect URLs** — add both:
 
      ```
-     https://muvozanat.<your-subdomain>.workers.dev/auth/callback
+     https://muvozanat.sardorfarhodogli.workers.dev/auth/callback
      muvozanat://auth/callback
      ```
 
@@ -255,7 +254,7 @@ Push anything to `main`, or **Actions → Deploy web → Run workflow**. Three
 workflows run: **CI**, **Deploy web**, and **EAS OTA update**. All three should
 go green.
 
-Open the workers.dev URL from the Deploy step's log. You should get the sign-in
+Open `https://muvozanat.sardorfarhodogli.workers.dev`. You should get the sign-in
 screen. Create an account, and the app should send you straight into the life
 wheel assessment.
 
