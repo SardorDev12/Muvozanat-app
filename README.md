@@ -176,12 +176,10 @@ Work through the steps in order — each one produces a value the next needs.
    - _Account → Workers Scripts → Edit_
    - _Account → Cloudflare Pages → Edit_
 
-3. **Create the Pages project now**, before any deploy targets it:
-   **Workers & Pages → Create → Pages → Upload assets**, named exactly
-   `muvozanat`. Upload nothing — CI replaces the contents. If the project does
-   not exist, the deploy fails even with a valid token.
+The Pages project itself is created automatically by the deploy workflow on its
+first run, so there is nothing to set up by hand.
 
-Your web address is now **`https://muvozanat.pages.dev`**. Step 4 needs it.
+Your web address will be **`https://muvozanat.pages.dev`**. Step 4 needs it.
 
 ### 3. Google Cloud — the sign-in client
 
