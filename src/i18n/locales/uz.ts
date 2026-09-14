@@ -32,6 +32,7 @@ const uz: Translations = {
     settings: 'Sozlamalar',
   },
   auth: {
+    signingIn: 'Tizimga kirilmoqda…',
     signIn: 'Kirish',
     signUp: 'Hisob yaratish',
     signOut: 'Chiqish',

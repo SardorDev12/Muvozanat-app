@@ -32,6 +32,7 @@ const ru: Translations = {
     settings: 'Настройки',
   },
   auth: {
+    signingIn: 'Выполняется вход…',
     signIn: 'Войти',
     signUp: 'Создать аккаунт',
     signOut: 'Выйти',

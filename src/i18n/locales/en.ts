@@ -30,6 +30,7 @@ const en = {
     settings: 'Settings',
   },
   auth: {
+    signingIn: 'Signing you in…',
     signIn: 'Sign in',
     signUp: 'Create account',
     signOut: 'Sign out',
