@@ -122,8 +122,19 @@ Work through the steps in order — each one produces a value the next needs.
 ### 1. Supabase — database and keys
 
 1. **Create the project.** [supabase.com/dashboard](https://supabase.com/dashboard)
-   → **New project**. Pick a region near your users and save the database
-   password somewhere safe.
+   → **New project**. Save the database password somewhere safe.
+
+   **The region is the one choice here you cannot undo.** Supabase runs in a
+   single region and cannot move a project afterwards — changing it means
+   creating a new project and migrating everything. Cloudflare serves the site
+   from an edge node near each visitor, but every database read, and four of
+   the six hops in a Google sign-in, go to this one place.
+
+   Pick the region closest to your users by _network route_, not by distance on
+   a map: traffic from Central Asia generally reaches the internet through
+   Europe, so `eu-central-1` (Frankfurt) usually beats somewhere that looks
+   nearer. Getting this wrong costs a few hundred milliseconds on every single
+   request, which is most visible as a sign-in that takes seconds.
 
 2. **Create the schema.** **SQL Editor → New query**, then paste and run the
    files from `supabase/migrations/` **in filename order**:
