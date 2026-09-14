@@ -80,6 +80,7 @@ src/
   theme/                  light/dark tokens
   utils/date.ts           calendar-day helpers
 supabase/migrations/      schema, functions/triggers, RLS
+wrangler.toml             the website Worker (serves the exported build)
 workers/reminders/        the Cloudflare cron worker
 .github/workflows/        CI, EAS preview builds, OTA updates, deploys
 ```
@@ -174,12 +175,16 @@ Work through the steps in order — each one produces a value the next needs.
 
 2. **My Profile → API Tokens → Create Token → Custom token**, with:
    - _Account → Workers Scripts → Edit_
-   - _Account → Cloudflare Pages → Edit_
 
-The Pages project itself is created automatically by the deploy workflow on its
-first run, so there is nothing to set up by hand.
+   That one permission covers both the website and the reminder cron, since
+   both are Workers.
 
-Your web address will be **`https://muvozanat.pages.dev`**. Step 4 needs it.
+The site is an assets-only Worker, created automatically by the deploy workflow
+on its first run. Nothing to set up by hand.
+
+Your web address will be **`https://muvozanat.<your-subdomain>.workers.dev`**.
+The exact value appears in the Deploy step's log the first time it runs, and
+under **Workers & Pages → muvozanat** afterwards. Step 4 needs it.
 
 ### 3. Google Cloud — the sign-in client
 
@@ -208,11 +213,11 @@ Your web address will be **`https://muvozanat.pages.dev`**. Step 4 needs it.
 2. **Email** is on by default. While testing, turning **Confirm email** off
    lets you sign up without checking your inbox.
 3. **Authentication → URL Configuration**:
-   - **Site URL**: `https://muvozanat.pages.dev`
+   - **Site URL**: your workers.dev address from step 2
    - **Redirect URLs** — add both:
 
      ```
-     https://muvozanat.pages.dev/auth/callback
+     https://muvozanat.<your-subdomain>.workers.dev/auth/callback
      muvozanat://auth/callback
      ```
 
@@ -250,8 +255,9 @@ Push anything to `main`, or **Actions → Deploy web → Run workflow**. Three
 workflows run: **CI**, **Deploy web**, and **EAS OTA update**. All three should
 go green.
 
-Open `https://muvozanat.pages.dev`. You should get the sign-in screen. Create an
-account, and the app should send you straight into the life wheel assessment.
+Open the workers.dev URL from the Deploy step's log. You should get the sign-in
+screen. Create an account, and the app should send you straight into the life
+wheel assessment.
 
 If sign-in with Google returns to a blank page, the redirect URL in step 4.3
 does not match your actual domain.
@@ -308,7 +314,7 @@ There is one branch, `main`. Every push to it deploys.
 | Workflow            | Trigger                              | Does                                                                                                       |
 | ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
 | `ci.yml`            | push to `main`                       | lint, typecheck, unit tests, schema tests against a real Postgres, web export smoke test, worker typecheck |
-| `deploy-web.yml`    | push to `main`                       | exports the web build and deploys it to Cloudflare Pages                                                   |
+| `deploy-web.yml`    | push to `main`                       | exports the web build and deploys it as a Cloudflare Worker                                                |
 | `eas-update.yml`    | push to `main`                       | re-runs the checks, then publishes an over-the-air update to the `production` channel                      |
 | `deploy-worker.yml` | push to `main` touching `workers/**` | deploys the reminder worker                                                                                |
 | `eas-preview.yml`   | **manual only**                      | builds an installable Android / iOS app                                                                    |

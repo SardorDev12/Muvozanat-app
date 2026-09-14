@@ -10,15 +10,22 @@ surface moves between SDKs.
   `expo/node_modules`, so a project-level babel config cannot resolve it and
   Metro fails to construct a transformer. The preset already adds
   `react-native-worklets/plugin` automatically when the package is installed.
-- **Web output stays `"single"`, and `public/_redirects` must ship.** Expo
-  Router's web build is a SPA, so without the `/* /index.html 200` rule
-  Cloudflare Pages 404s on `/today` or a refresh of `/goals/<id>`. `"static"`
-  was tried and reverted: every route sits behind a client-side auth gate, so
-  prerendering emits only wrapper divs, and those wrappers hydrate against a
-  different theme and safe-area measurement — React error #418 on every page
-  load, in both colour schemes. The only thing static bought was `<head>` tags.
+- **Web output stays `"single"`, and the SPA fallback must stay configured.**
+  Expo Router's web build is a SPA, so without `not_found_handling =
+"single-page-application"` in the root `wrangler.toml`, `/today` or a refresh
+  of `/goals/<id>` 404s. That setting is the Workers equivalent of the
+  `/* /index.html 200` rule Cloudflare Pages needed in `_redirects`; the site
+  moved from Pages to an assets-only Worker, so `public/_redirects` is gone and
+  adding one back would do nothing. `"static"` output was tried and reverted:
+  every route sits behind a client-side auth gate, so prerendering emits only
+  wrapper divs, and those hydrate against a different theme and safe-area
+  measurement — React error #418 on every page load, in both colour schemes.
   `app/+html.tsx` is ignored under `"single"`; do not add one back expecting it
   to apply.
+- **Two Workers, two configs.** The root `wrangler.toml` is the website, an
+  assets-only Worker with no `main` script. `workers/reminders/wrangler.toml` is
+  the nightly reminder cron. Deploying one must never pick up the other's
+  config.
 - **i18next initialises synchronously at import.** Gating the tree on an async
   init cost a blank first frame on every launch. `hydrateStoredLanguage()`
   applies a saved preference after the first paint.

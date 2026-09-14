@@ -1,0 +1,23 @@
+# The website: a Worker that serves the exported Expo web build.
+#
+# There is no `main` script — this is an assets-only Worker, so Cloudflare
+# serves `dist/` straight from its edge with no Worker invocation (and no
+# request billing) for a static file.
+#
+# The reminder cron is a separate Worker; see workers/reminders/wrangler.toml.
+
+name = "muvozanat"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "./dist"
+
+# Expo Router's web build is a single-page app: one index.html plus a bundle,
+# with routing done in the browser. Without this, a request for /today or a
+# refresh on /goals/<id> looks for a file that was never emitted and 404s.
+# This is the Workers equivalent of the `/* /index.html 200` rule that
+# Cloudflare Pages needed in a _redirects file.
+not_found_handling = "single-page-application"
+
+[observability]
+enabled = true
