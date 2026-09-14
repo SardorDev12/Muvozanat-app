@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "rootDir": "./src",
+    "outDir": ".test-build",
+    "types": ["node"]
+  },
+  "include": [
+    "src/utils/date.ts",
+    "src/features/assessment/areas.ts",
+    "src/features/tasks/recurrence.ts",
+    "src/features/**/*.test.ts",
+    "src/utils/**/*.test.ts"
+  ]
+}

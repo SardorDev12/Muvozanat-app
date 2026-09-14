@@ -1,0 +1,17 @@
+name = "muvozanat-reminders"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Once a day at 06:00 UTC. The job is idempotent — it skips anyone who already
+# has an open nudge — so a missed or repeated run is harmless.
+[triggers]
+crons = ["0 6 * * *"]
+
+[observability]
+enabled = true
+
+[vars]
+SUPABASE_URL = "https://your-project.supabase.co"
+# Set as secrets, never here:
+#   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+#   wrangler secret put ADMIN_TRIGGER_SECRET

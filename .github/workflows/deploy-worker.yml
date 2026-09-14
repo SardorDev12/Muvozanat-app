@@ -1,0 +1,42 @@
+name: Deploy reminder worker
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'workers/reminders/**'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-worker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    # Only `main` reaches the live cron; `dev` pushes stop at the typecheck in
+    # CI so a half-finished sweep never runs against production data.
+    if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/reminders
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/reminders/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/reminders
+          command: deploy
