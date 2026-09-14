@@ -237,14 +237,8 @@ this repo do the builds and deploys for you.
 | `CLOUDFLARE_API_TOKEN`          | token from step 5          | web and worker deploys         |
 | `CLOUDFLARE_ACCOUNT_ID`         | account id from step 5     | web and worker deploys         |
 
-Then:
-
-- **Settings → General → Default branch**: set it to `dev`. Create `main` when
-  you are ready to ship — `main` is what drives production updates and deploys
-  the worker.
-- **Issues → Labels → New label**: create `build-preview`. Adding it to a pull
-  request is what triggers a native build, so ordinary PRs do not each consume
-  an EAS build.
+`main` is the only branch and is already the default, so there is nothing else
+to configure here.
 
 ### 7. The reminder worker's secret
 
@@ -264,19 +258,19 @@ Secrets set in the dashboard survive later deploys, so this is a one-off.
 
 ### 8. Run and build it
 
-- **Web**: pushing to `dev` or `main` exports the site and deploys it to
+- **Web**: pushing to `main` exports the site and deploys it to
   Cloudflare Pages. `public/_redirects` ships the SPA fallback rule, so deep
   links like `/goals/<id>` and page refreshes resolve instead of 404ing.
   Running locally (`npm install && npm run web`) is optional.
-- **On a phone, no Mac or Android Studio needed**: **Actions → EAS preview
+- **On a phone, no Mac or Android Studio needed**: **Actions → EAS native
   build → Run workflow**, pick a platform. When it finishes, the build appears
   under your project on [expo.dev](https://expo.dev) with a QR code and an
   install link. Android gives you an APK you can install directly; iOS needs
   the device registered to your Apple Developer account, which Expo walks you
   through the first time.
-- **After that, JS-only changes need no rebuild**: pushing to `dev` publishes
-  an over-the-air update to the `preview` channel, and the installed app picks
-  it up on next launch.
+- **After that, JS-only changes need no rebuild**: every push to `main`
+  publishes an over-the-air update, and the installed app picks it up on its
+  next launch.
 
 <details>
 <summary>Prefer the command line?</summary>
@@ -294,16 +288,28 @@ cd workers/reminders && npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 
 ## What CI runs, and when
 
-| Workflow            | Trigger                                                          | Does                                                                               |
-| ------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `ci.yml`            | every PR, push to `dev`/`main`                                   | lint, typecheck, unit tests, web export smoke test, worker typecheck               |
-| `eas-preview.yml`   | PR labelled `build-preview`, or manual                           | publishes an OTA update to a `pr-<number>` branch and starts native preview builds |
-| `eas-update.yml`    | push to `dev` → `preview` channel; push to `main` → `production` | re-runs the checks, then publishes the OTA update                                  |
-| `deploy-web.yml`    | push to `dev`/`main`                                             | exports the static web build and deploys to Cloudflare Pages                       |
-| `deploy-worker.yml` | push to `main` touching `workers/**`                             | deploys the reminder worker                                                        |
+There is one branch, `main`. Every push to it deploys.
 
-OTA updates reach users without review, so `eas-update.yml` re-runs lint,
-typecheck and tests before publishing rather than trusting the PR that merged.
+| Workflow            | Trigger                              | Does                                                                                                       |
+| ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `ci.yml`            | push to `main`                       | lint, typecheck, unit tests, schema tests against a real Postgres, web export smoke test, worker typecheck |
+| `deploy-web.yml`    | push to `main`                       | exports the web build and deploys it to Cloudflare Pages                                                   |
+| `eas-update.yml`    | push to `main`                       | re-runs the checks, then publishes an over-the-air update to the `production` channel                      |
+| `deploy-worker.yml` | push to `main` touching `workers/**` | deploys the reminder worker                                                                                |
+| `eas-preview.yml`   | **manual only**                      | builds an installable Android / iOS app                                                                    |
+
+**Native builds are deliberately not automatic.** They take 10-20 minutes and
+use EAS build credits, and almost every change reaches an installed app as an
+over-the-air update instead. Run one from **Actions → EAS native build → Run
+workflow** when you actually need a new installable app: after adding a native
+library, changing `app.json`, or setting up a new device.
+
+Builds from the `preview` profile sit on the `production` channel on purpose.
+An app you sideload for testing has to listen to the same channel the pushes
+publish to, or it would never receive an update.
+
+OTA updates reach installed apps with no review step, so `eas-update.yml`
+re-runs lint, typecheck and tests before publishing.
 
 ---
 

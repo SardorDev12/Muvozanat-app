@@ -2,7 +2,7 @@ name: Deploy reminder worker
 
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
     paths:
       - 'workers/reminders/**'
       - '.github/workflows/deploy-worker.yml'
@@ -15,9 +15,6 @@ concurrency:
 jobs:
   deploy:
     name: Deploy to Cloudflare Workers
-    # Only `main` reaches the live cron; `dev` pushes stop at the typecheck in
-    # CI so a half-finished sweep never runs against production data.
-    if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
