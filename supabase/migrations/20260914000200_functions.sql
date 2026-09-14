@@ -57,6 +57,36 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- ------------------------------------------- derived reminder date ----
+
+-- next_reassess_at would be a GENERATED column if Postgres allowed it, but
+-- `timestamptz + interval` is only STABLE (adding days consults the session
+-- time zone for DST), so it is maintained here instead. Running BEFORE the row
+-- is written means the column is always consistent with its two inputs, and a
+-- client that tries to set it directly is simply overruled.
+create or replace function public.compute_next_reassess()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.last_assessment_at is null or new.reassess_interval_days is null then
+    new.next_reassess_at := null;
+  else
+    new.next_reassess_at :=
+      new.last_assessment_at + make_interval(days => new.reassess_interval_days);
+  end if;
+  return new;
+end;
+$$;
+
+-- Fires on every insert and update rather than only when the two inputs are
+-- in the SET list: a client can reach this table directly under RLS, and
+-- limiting the trigger to those columns would let an update that touched only
+-- next_reassess_at write an arbitrary due date that nothing ever corrected.
+create trigger profiles_compute_next_reassess
+  before insert or update on public.profiles
+  for each row execute function public.compute_next_reassess();
+
 -- ------------------------------------------ assessment bookkeeping ----
 
 -- Keeps profiles.last_assessment_at in step so next_reassess_at stays correct

@@ -37,8 +37,22 @@ surface moves between SDKs.
 
 ```bash
 npm run lint && npm run typecheck && npm test
+npm run test:schema   # needs Postgres; see scripts/test-schema.sh
 ```
 
 `npm test` compiles the pure-logic modules with `tsconfig.test.json` and runs
 them under `node --test`. The recurrence and Today-list rules are covered there;
 add cases rather than reasoning about calendars by hand.
+
+`npm run test:schema` applies every migration to a throwaway Postgres and runs
+`supabase/tests/schema_test.sql`. **Any change to a migration must go through
+it** — typechecking cannot see a non-immutable generated column, a trigger that
+never fires, or an RLS policy that leaks another user's rows. Add an assertion
+for every invariant you introduce, and check it fails when you break the thing
+it guards.
+
+- **`next_reassess_at` is derived, not stored by the client.** The
+  `profiles_compute_next_reassess` trigger recomputes it on _every_ insert and
+  update. It deliberately has no `UPDATE OF` column list: clients reach this
+  table directly under RLS, so a narrower trigger would let an update touching
+  only that column write an arbitrary due date.

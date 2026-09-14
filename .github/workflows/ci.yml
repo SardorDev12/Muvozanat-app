@@ -41,6 +41,31 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: npx expo export --platform web --output-dir dist
 
+  schema:
+    name: Schema tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Applies every migration in order to a real Postgres and asserts the
+      # behaviour typechecking cannot see: that triggers fire, that the
+      # completion rollup reaches goals, and that RLS actually isolates users.
+      - name: Apply migrations and assert
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: scripts/test-schema.sh
+
   worker:
     name: Worker typecheck
     runs-on: ubuntu-latest

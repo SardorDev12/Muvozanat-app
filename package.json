@@ -54,7 +54,8 @@
     "db:reset": "supabase db reset",
     "worker:dev": "npm --prefix workers/reminders run dev",
     "worker:deploy": "npm --prefix workers/reminders run deploy",
-    "test": "rm -rf .test-build && tsc -p tsconfig.test.json && node --test \".test-build/**/*.test.js\""
+    "test": "rm -rf .test-build && tsc -p tsconfig.test.json && node --test \".test-build/**/*.test.js\"",
+    "test:schema": "scripts/test-schema.sh"
   },
   "private": true
 }

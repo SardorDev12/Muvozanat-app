@@ -309,10 +309,22 @@ npm run typecheck
 npm test
 ```
 
+```bash
+npm run test:schema
+```
+
 `npm test` compiles the pure-logic modules with `tsconfig.test.json` and runs
 them under `node --test`. The recurrence rules and the Today/missed/completed
 composition are covered there — including leap days, month-end clamping,
 partial first weeks, and the missed-lookback bound.
+
+`npm run test:schema` applies every migration to a throwaway Postgres and
+asserts the things a typecheck cannot see: that the profile trigger fires on a
+new user, that completion rolls from tasks through components to goals and back
+when reopened, that a paused goal survives the rollup, and that Row Level
+Security actually stops one user reading another's data. It needs a local
+Postgres, or `DATABASE_URL` pointing at one — CI runs it against a `postgres:16`
+service on every pull request.
 
 ---
 

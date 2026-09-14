@@ -45,12 +45,12 @@ create table public.profiles (
   ),
   -- Maintained by a trigger on public.assessments.
   last_assessment_at timestamptz,
-  next_reassess_at timestamptz generated always as (
-    case
-      when last_assessment_at is null or reassess_interval_days is null then null
-      else last_assessment_at + make_interval(days => reassess_interval_days)
-    end
-  ) stored,
+  -- Derived from last_assessment_at + reassess_interval_days by the
+  -- profiles_compute_next_reassess trigger. It cannot be a GENERATED column:
+  -- `timestamptz + interval` is STABLE rather than IMMUTABLE, because adding
+  -- days has to consult the session time zone to get DST right, and Postgres
+  -- rejects a non-immutable generation expression.
+  next_reassess_at timestamptz,
   -- Set when the user taps "remind me later"; the nudge stays quiet until then.
   reassess_snoozed_until timestamptz,
   -- How far back the Today screen looks for missed occurrences.
@@ -61,7 +61,11 @@ create table public.profiles (
 );
 
 comment on column public.profiles.next_reassess_at is
-  'Derived reminder due date. The Cloudflare Worker cron reads this column.';
+  'Derived reminder due date, maintained by trigger. The Cloudflare Worker cron reads this column.';
+
+-- The Worker sweeps on this column daily.
+create index profiles_reassess_due_idx on public.profiles (next_reassess_at)
+  where next_reassess_at is not null;
 
 -- ---------------------------------------------------------- assessments ----
 
