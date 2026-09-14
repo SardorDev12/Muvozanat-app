@@ -55,10 +55,17 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "5a10addd-c02b-4f15-851c-ee9334c6ff3d"
+      }
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5a10addd-c02b-4f15-851c-ee9334c6ff3d"
+    },
+    "owner": "sardordev12"
   }
 }
