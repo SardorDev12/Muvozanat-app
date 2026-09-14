@@ -3,12 +3,7 @@ import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import {
-  AREA_BY_KEY,
-  MAX_SCORE,
-  MIN_SCORE,
-  type LifeAreaKey,
-} from '@/features/assessment/areas';
+import { AREA_BY_KEY, MAX_SCORE, MIN_SCORE, type LifeAreaKey } from '@/features/assessment/areas';
 import { useTheme } from '@/theme/ThemeProvider';
 
 import { Sheet } from './ui/Sheet';
@@ -169,7 +164,12 @@ const styles = StyleSheet.create({
   row: { borderWidth: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   grow: { flex: 1 },
-  badge: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 3 },
+  badge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   option: { flexDirection: 'row', alignItems: 'center' },
   optionBadge: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   onColor: { color: '#0E1116' },

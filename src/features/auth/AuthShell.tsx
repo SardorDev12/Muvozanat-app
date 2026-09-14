@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 
+import { BrandMark } from '@/components/BrandMark';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -19,6 +20,10 @@ export function AuthShell({
   return (
     <Screen contentStyle={{ justifyContent: 'center' }}>
       <View style={{ gap: spacing.xl, paddingVertical: spacing.xxl }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <BrandMark size={32} />
+          <Text variant="heading">Muvozanat</Text>
+        </View>
         <View style={{ gap: spacing.sm }}>
           <Text variant="display">{title}</Text>
           {subtitle ? <Text tone="muted">{subtitle}</Text> : null}

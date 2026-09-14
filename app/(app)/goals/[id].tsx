@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { ComponentEditorSheet } from '@/components/ComponentEditorSheet';
 import { GoalEditorSheet } from '@/components/GoalEditorSheet';
 import { ProgressRing } from '@/components/ProgressRing';
 import { TaskEditorSheet } from '@/components/TaskEditorSheet';
@@ -27,7 +28,7 @@ import { useTasksForGoal, useUpdateTask } from '@/features/tasks/queries';
 import { nextOccurrence } from '@/features/tasks/recurrence';
 import { intlLocale } from '@/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
-import type { TaskRow } from '@/types/database';
+import type { GoalComponentRow, TaskRow } from '@/types/database';
 import { formatDate } from '@/utils/date';
 import { useTodayKey } from '@/utils/useNow';
 
@@ -134,6 +135,7 @@ export default function GoalDetailScreen() {
 
   const [newComponent, setNewComponent] = useState('');
   const [goalEditorOpen, setGoalEditorOpen] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<GoalComponentRow | null>(null);
   const [taskEditor, setTaskEditor] = useState<{
     open: boolean;
     task: TaskRow | null;
@@ -251,6 +253,16 @@ export default function GoalDetailScreen() {
                         </Text>
                       ) : null}
                     </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t('goals.editComponent')}
+                      onPress={() => setEditingComponent(component)}
+                      hitSlop={8}
+                    >
+                      <Text variant="body" tone="faint">
+                        ✎
+                      </Text>
+                    </Pressable>
                   </View>
 
                   <View style={{ gap: spacing.sm, paddingLeft: spacing.xl }}>
@@ -366,6 +378,13 @@ export default function GoalDetailScreen() {
         visible={goalEditorOpen}
         goal={row}
         onClose={() => setGoalEditorOpen(false)}
+      />
+
+      <ComponentEditorSheet
+        visible={!!editingComponent}
+        component={editingComponent}
+        onClose={() => setEditingComponent(null)}
+        confirmDelete={confirmDestructive}
       />
 
       <TaskEditorSheet

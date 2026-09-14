@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import packageJson from '@/../package.json';
+import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -11,11 +13,7 @@ import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile, useUpdateProfile } from '@/features/profile/queries';
 import { SUPPORTED_LANGUAGES, intlLocale, setLanguage, type LanguageCode } from '@/i18n';
-import {
-  THEME_PREFERENCES,
-  setThemePreference,
-  useThemePreference,
-} from '@/theme/preference';
+import { THEME_PREFERENCES, setThemePreference, useThemePreference } from '@/theme/preference';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatTimestamp } from '@/utils/date';
 import { useNow } from '@/utils/useNow';
@@ -176,6 +174,16 @@ export default function SettingsScreen() {
             }
           }}
         />
+
+        <View style={{ alignItems: 'center', gap: spacing.sm, paddingTop: spacing.lg }}>
+          <BrandMark size={40} />
+          <Text variant="label" tone="muted">
+            {t('settings.about')}
+          </Text>
+          <Text variant="caption" tone="faint">
+            {t('settings.version', { version: packageJson.version })}
+          </Text>
+        </View>
       </View>
     </Screen>
   );

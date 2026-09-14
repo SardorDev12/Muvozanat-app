@@ -210,7 +210,8 @@ const en = {
     subtitle: 'Be honest — this is only for you.',
     scaleHint: 'Tap an area and pick the description that fits.',
     rideTitle: 'How your wheel rolls',
-    rideCaption: 'An even wheel rolls smoothly. Low areas are the flat spots you feel on every turn.',
+    rideCaption:
+      'An even wheel rolls smoothly. Low areas are the flat spots you feel on every turn.',
     yourWheel: 'Your wheel',
     distribution: 'How your attention is distributed',
     average: 'Balance score',
@@ -250,8 +251,13 @@ const en = {
     components: 'Components',
     componentsHint: 'The milestones this goal breaks down into.',
     newComponent: 'Add component',
+    editComponent: 'Edit component',
+    componentTitle: 'Component name',
     componentTitlePlaceholder: 'Build a 10k base',
     noComponents: 'No components yet. Add the first milestone.',
+    deleteComponent: 'Delete component',
+    deleteComponentConfirm:
+      'This deletes the component and its tasks, but not the goal. This cannot be undone.',
     tasks: 'Tasks',
     directTasks: 'Tasks for this goal',
     newTask: 'Add task',

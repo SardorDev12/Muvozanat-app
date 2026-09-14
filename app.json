@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0E1116"
+      "backgroundColor": "#0F7A63"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -23,7 +23,7 @@
     "android": {
       "package": "app.muvozanat.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#0E1116",
+        "backgroundColor": "#0F7A63",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -47,7 +47,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#0E1116"
+          "backgroundColor": "#0F7A63"
         }
       ]
     ],
