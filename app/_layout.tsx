@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ConfigGate } from '@/components/ConfigGate';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { hydrateStoredLanguage } from '@/i18n';
 import { hydrateStoredTheme } from '@/theme/preference';
@@ -49,15 +50,17 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <QueryProvider>
-            <AuthProvider>
-              <RootStack />
-            </AuthProvider>
-          </QueryProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <ConfigGate>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <QueryProvider>
+              <AuthProvider>
+                <RootStack />
+              </AuthProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </ConfigGate>
     </GestureHandlerRootView>
   );
 }
