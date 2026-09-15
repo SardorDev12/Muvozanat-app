@@ -1,0 +1,78 @@
+name: Sync EAS environment variables
+
+# EAS Build reads EXPO_PUBLIC_* values for a cloud build from its own
+# "Environment Variables" store, scoped per environment (development /
+# preview / production) — a separate system from GitHub Actions secrets of
+# the same name, which only exist on the runner invoking `eas build` and
+# never reach the remote machine that actually bundles the JS. This workflow
+# is what actually gets our two Supabase values onto EAS's side, from the
+# same GitHub secrets everything else already uses. Run it once, and again
+# any time those secrets rotate (e.g. after moving Supabase to a new
+# project/region).
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Push Supabase config into every EAS environment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Check required secrets
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=""
+          [ -n "$EXPO_PUBLIC_SUPABASE_URL" ] || missing="$missing EXPO_PUBLIC_SUPABASE_URL"
+          [ -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ] || missing="$missing EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing"
+            exit 1
+          fi
+
+      - name: Push to every EAS environment
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set -e
+          # `create` fails if the variable already exists; `update` is the
+          # fallback for every run after the first, or after a rotation.
+          push() {
+            local env="$1" name="$2" value="$3" visibility="$4"
+            if eas env:create --environment "$env" --name "$name" --value "$value" \
+                 --visibility "$visibility" --non-interactive 2>/tmp/eas-env.log; then
+              echo "created $name for $env"
+            else
+              cat /tmp/eas-env.log
+              eas env:update --environment "$env" --name "$name" --value "$value" \
+                --visibility "$visibility" --non-interactive
+              echo "updated $name for $env"
+            fi
+          }
+
+          for env in development preview production; do
+            push "$env" EXPO_PUBLIC_SUPABASE_URL "$EXPO_PUBLIC_SUPABASE_URL" plaintext
+            push "$env" EXPO_PUBLIC_SUPABASE_ANON_KEY "$EXPO_PUBLIC_SUPABASE_ANON_KEY" sensitive
+          done
+
+      - name: Verify
+        run: |
+          for env in development preview production; do
+            echo "### $env"
+            eas env:list --environment "$env" --non-interactive
+          done
