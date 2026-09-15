@@ -44,35 +44,25 @@ jobs:
             exit 1
           fi
 
+      # `env:set` upserts (create-or-update in one call), replacing the older
+      # `env:create` (deprecated, and fails on a second run).
       - name: Push to every EAS environment
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           set -e
-          # `create` fails if the variable already exists; `update` is the
-          # fallback for every run after the first, or after a rotation.
-          push() {
-            local env="$1" name="$2" value="$3" visibility="$4"
-            if eas env:create --environment "$env" --name "$name" --value "$value" \
-                 --visibility "$visibility" --non-interactive 2>/tmp/eas-env.log; then
-              echo "created $name for $env"
-            else
-              cat /tmp/eas-env.log
-              eas env:update --environment "$env" --name "$name" --value "$value" \
-                --visibility "$visibility" --non-interactive
-              echo "updated $name for $env"
-            fi
-          }
-
           for env in development preview production; do
-            push "$env" EXPO_PUBLIC_SUPABASE_URL "$EXPO_PUBLIC_SUPABASE_URL" plaintext
-            push "$env" EXPO_PUBLIC_SUPABASE_ANON_KEY "$EXPO_PUBLIC_SUPABASE_ANON_KEY" sensitive
+            eas env:set --environment "$env" --name EXPO_PUBLIC_SUPABASE_URL \
+              --value "$EXPO_PUBLIC_SUPABASE_URL" --visibility plaintext --non-interactive
+            eas env:set --environment "$env" --name EXPO_PUBLIC_SUPABASE_ANON_KEY \
+              --value "$EXPO_PUBLIC_SUPABASE_ANON_KEY" --visibility sensitive --non-interactive
+            echo "synced $env"
           done
 
       - name: Verify
         run: |
           for env in development preview production; do
             echo "### $env"
-            eas env:list --environment "$env" --non-interactive
+            eas env:list --environment "$env"
           done
